@@ -1,14 +1,14 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
-import { create } fromzustand";
+import { create } from "zustand";
 
 type UIState = {
   theme: "light" | "dark";
   setTheme: (t: "light" | "dark") => void;
 };
 
-export const useUI = create<UIState>((set) => ({
+export const useUI = create<UIState>()((set) => ({
   theme: "light",
   setTheme: (t) => {
     if (typeof document !== "undefined") {

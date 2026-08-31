@@ -1,7 +1,10 @@
 "use client";
 
-import { useToasts } from "./toast-store";
+import { useToasts, toast as push } from "./toast-store";
 import { X } from "lucide-react";
+
+export { useToasts, push as toast };
+export type { Toast } from "./toast-store";
 
 export function Toaster() {
   const toasts = useToasts((s) => s.toasts);

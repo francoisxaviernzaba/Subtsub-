@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /boost
+Disallow: /s2s
+Disallow: /coins
+Disallow: /settings
+Disallow: /profile
+Disallow: /transactions
+Sitemap: /sitemap.xml

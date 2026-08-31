@@ -50,25 +50,25 @@ async function cached<T>(key: string, ttlMs: number, loader: () => Promise<T>): 
 
 export type YTChannel = {
   id: string;
-  handle?: string;
+  handle?: string | null;
   title: string;
-  description?: string;
-  thumbnailUrl?: string;
-  subscriberCount?: number;
-  videoCount?: number;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  subscriberCount?: number | null;
+  videoCount?: number | null;
 };
 
 export type YTVideo = {
   id: string;
   title: string;
-  description?: string;
-  thumbnailUrl?: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
   channelId: string;
   channelTitle: string;
-  publishedAt?: string;
-  durationSec?: number;
-  viewCount?: number;
-  likeCount?: number;
+  publishedAt?: string | null;
+  durationSec?: number | null;
+  viewCount?: number | null;
+  likeCount?: number | null;
 };
 
 export function parseChannelId(input: string): string | null {
@@ -211,7 +211,8 @@ export async function checkSubscription(
     const ytAuth = google.youtube({ version: "v3", auth });
     let pageToken: string | undefined = undefined;
     do {
-      const res = await ytAuth.subscriptions.list({
+      // googleapis infers circular self-types here; use a loose shape
+      const res: { data: { items?: Array<{ snippet?: { resourceId?: { channelId?: string | null } } }>; nextPageToken?: string | null } } = await ytAuth.subscriptions.list({
         part: ["snippet"],
         mine: true,
         maxResults: 50,

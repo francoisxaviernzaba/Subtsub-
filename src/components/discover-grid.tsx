@@ -97,7 +97,7 @@ export function DiscoverGrid({ defaultMinReward }: { defaultMinReward: number })
 
       <div ref={sentinel} className="h-12 grid place-items-center mt-4">
         {loading && <Loader2 className="animate-spin" size={20} />}
-        {done && items.length > 0 && <div className="text-xs text-ink-500">You're all caught up</div>}
+        {done && items.length > 0 && <div className="text-xs text-ink-500">You&apos;re all caught up</div>}
       </div>
     </div>
   );

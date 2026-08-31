@@ -157,7 +157,7 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
               </button>
             ) : state === "watching" ? (
               <button onClick={claimVideo} className="btn btn-primary w-full">
-                <ExternalLink size={14} /> I've watched — Verify
+                <ExternalLink size={14} /> I&apos;ve watched — Verify
               </button>
             ) : (
               <button disabled className="btn btn-primary w-full">
@@ -176,7 +176,7 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
             </a>
           ) : state === "watching" ? (
             <button onClick={claimSubscribe} className="btn btn-primary w-full">
-              <Users size={14} /> I've subscribed — Verify
+              <Users size={14} /> I&apos;ve subscribed — Verify
             </button>
           ) : (
             <button disabled className="btn btn-primary w-full">
