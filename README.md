@@ -40,26 +40,30 @@ pnpm dev
 
 `pnpm dev` automatically pushes the Prisma schema to your Neon DB on first run.
 
-### Deploy to Vercel (one-click)
+### Deploy to Vercel (one-click, single secret)
 
 1. Push to GitHub (done)
 2. Go to [vercel.com/new](https://vercel.com/new) → import `francoisxaviernzaba/Subtsub-`
-3. In **Storage** tab → add **Neon Postgres** integration (free) → this auto-injects `DATABASE_URL` into all environments. No manual DB config needed.
-4. Add the remaining env vars in **Settings → Environment Variables** (use the table below).
-5. Deploy. The build command (`prisma generate && prisma db push && next build`) auto-creates all tables on first build.
+3. In **Storage** tab → add **Neon Postgres** integration (free) → this auto-injects `DATABASE_URL`.
+4. **Encrypt your secrets into ONE value** (run locally):
+   ```bash
+   pnpm secrets:encrypt        # creates .env.secrets.json template
+   # fill .env.secrets.json with your real Google/YouTube/Auth values
+   pnpm secrets:encrypt        # prints a single SECRETS_BLOB value
+   ```
+5. In **Settings → Environment Variables** paste just **3 values**:
+   - `SECRETS_BLOB` = the blob from step 4
+   - `SECRETS_MASTER_KEY` = a 32-byte random string (used to decrypt; reuse your TOKEN_ENC_KEY value)
+   - `NEXTAUTH_URL` = your Vercel URL (e.g. `https://sub2sub.vercel.app`)
+6. Deploy. The build command auto-pushes the Prisma schema to Neon.
 
-| Variable | Where to get it |
-| --- | --- |
-| `AUTH_SECRET` | `openssl rand -base64 32` |
-| `NEXTAUTH_URL` | Your Vercel URL (e.g. `https://sub2sub.vercel.app`) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) — add redirect URI `${NEXTAUTH_URL}/api/auth/callback/google` |
-| `YOUTUBE_API_KEY` | Same project → Enable "YouTube Data API v3" → API key |
-| `YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET` | New OAuth client "Web" — redirect URI `${NEXTAUTH_URL}/api/youtube/callback` |
-| `YOUTUBE_REDIRECT_URI` | Same as `${NEXTAUTH_URL}/api/youtube/callback` |
-| `TOKEN_ENC_KEY` | `openssl rand -base64 32` |
-| `ADMIN_EMAILS` | Comma-separated — your Google email becomes ADMIN on first login |
-| `PAYMENT_PROVIDER` | `mock` (default) or `stripe` |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Only if using Stripe |
+The `NEXTAUTH_URL` redirect URI for YouTube OAuth is **auto-derived** from `VERCEL_URL`, so you don't have to update it when you change domains.
+
+### Why this is safe
+- Vercel encrypts env vars at rest (KMS) — even SECRETS_BLOB is double-encrypted (your AES-GCM layer + Vercel's KMS)
+- Your dashboard screenshot only shows opaque `SECRETS_BLOB` / `SECRETS_MASTER_KEY` / `NEXTAUTH_URL`
+- Per-user YouTube tokens are still encrypted in the database with AES-256-GCM
+- If you prefer not to use the blob, the individual env vars in `.env.example` also work — `applySecrets()` in `src/instrumentation.ts` falls back automatically
 
 ### Required env (see `.env.example`)
 
