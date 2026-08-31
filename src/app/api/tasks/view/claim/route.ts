@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
     return await withIdempotency(u.user.id, "view.claim", idempotencyKey ?? null, async () => {
       const settings = await getSettings();
 
-      // Dedup per (user, campaign)
+      // Dedup per (user, campaign) — application-level check
       const existing = await prisma.taskCompletion.findFirst({
-        where: { userId: u!.user.id, campaignId },
+        where: { userId: u!.user.id, campaignId, targetChannelId: null },
       });
       if (existing) {
         if (existing.state === "VERIFIED") throw new HttpError(409, "DUPLICATE", "You already earned for this campaign");
@@ -61,9 +61,8 @@ export async function POST(req: NextRequest) {
           where: { id: c.id },
           data: { spentBudget: { increment: reward }, completedActions: { increment: 1 } },
         });
-        const completion = await tx.taskCompletion.upsert({
-          where: { id: existing?.id ?? "_new_" },
-          create: {
+        const completion = await tx.taskCompletion.create({
+          data: {
             userId: u!.user.id,
             campaignId: c.id,
             targetChannelId: null,
@@ -73,25 +72,6 @@ export async function POST(req: NextRequest) {
             verifiedAt: new Date(),
             idempotencyKey: idempotencyKey ?? null,
           },
-          update: {
-            state: "VERIFIED",
-            rewardCoins: reward,
-            watchSeconds,
-            verifiedAt: new Date(),
-          },
-        }).catch(async () => {
-          // upsert by composite not supported on SQLite; create new
-          return tx.taskCompletion.create({
-            data: {
-              userId: u!.user.id,
-              campaignId: c.id,
-              state: "VERIFIED",
-              rewardCoins: reward,
-              watchSeconds,
-              verifiedAt: new Date(),
-              idempotencyKey: idempotencyKey ?? null,
-            },
-          });
         });
         const credit = await creditCoins({
           userId: u!.user.id,
@@ -119,8 +99,8 @@ export async function POST(req: NextRequest) {
       const after = await prisma.campaign.findUnique({ where: { id: campaignId } });
       if (after && after.spentBudget >= after.totalBudget) {
         await prisma.notification.create({
-          data: { userId: after.ownerId, kind: "BUDGET_EXHAUSTED", title: "Campaign budget exhausted", body: after.title, link: "/boost" },
-        }).catch(() => {});
+      data: { userId: after.ownerId, kind: "BUDGET_EXHAUSTED", title: "Campaign budget exhausted", body: after.title, link: "/boost" },
+    }).catch(() => {});
       }
 
       return { ok: true, reward: result.reward, balance: result.balance };

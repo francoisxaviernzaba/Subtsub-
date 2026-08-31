@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -178,14 +178,19 @@ model TaskCompletion {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
+  // Composite unique — one completion per (user, campaign, targetChannel).
+  // For VIDEO_VIEW: targetChannelId is null → (user, campaign, NULL) is unique.
+  // For SUBSCRIBER: same user can't earn twice for the same target channel in the same campaign.
+  // Combined with the app-level check below, this is a robust DB-level guard.
+  @@unique([userId, campaignId, targetChannelId])
   @@index([userId, targetChannelId])
   @@index([campaignId, state])
   @@index([userId, state])
 }
 
-// Dedup rules enforced at app level (in atomic tx):
-//   SUBSCRIBER: unique (userId, targetChannelId)
-//   VIDEO_VIEW: unique (userId, campaignId)
+// Dedup rules additionally enforced at app level (in atomic tx):
+//   SUBSCRIBER: at most one VERIFIED/PENDING completion per (userId, targetChannelId) across all campaigns
+//   VIDEO_VIEW: at most one VERIFIED/PENDING completion per (userId, campaignId)
 
 // ============================================================
 // COIN ECONOMY (double-entry ledger)
