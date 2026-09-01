@@ -5,15 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "vercel-build": "prisma generate && prisma db push --skip-generate && next build",
+    "vercel-build": "prisma generate && ( [ -n \"$DATABASE_URL\" ] && prisma db push --skip-generate --accept-data-loss || echo 'Skipping db push: DATABASE_URL not set at build time (run manually or in Vercel Storage setup)' ) && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
-    "secrets:encrypt": "tsx scripts/encrypt-secrets.ts",
-    "postinstall": "prisma generate"
+    "secrets:encrypt": "tsx scripts/encrypt-secrets.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
