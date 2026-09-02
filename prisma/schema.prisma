@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")  // Prisma integration injects POSTGRES_URL; we map it below in next.config
 }
 
 // ============================================================
