@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
       <div className="card p-8 max-w-md w-full text-center">
         <div className="mx-auto size-12 rounded-2xl bg-gradient-to-br from-brand-500 to-pink-500 grid place-items-center text-white font-extrabold shadow-glow">S2S</div>
         <h1 className="mt-4 text-2xl font-bold">Welcome to SUB2SUB</h1>
-        <p className="mt-2 text-ink-500 text-sm">Sign in with your verified Google account to continue.</p>
+        <p className="mt-2 text-ink-500 text-sm">Sign in to continue.</p>
 
         {searchParams.error && (
           <div className="mt-4 p-3 rounded-lg bg-rose-100 text-rose-700 text-sm">
@@ -20,19 +20,48 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
         )}
 
         <form
+          action={async (formData) => {
+            "use server";
+            await signIn("credentials", {
+              redirect: true,
+              email: formData.get("email"),
+              password: formData.get("password"),
+              redirectTo: searchParams.from || "/home",
+            });
+          }}
+          className="mt-6 space-y-3 text-left"
+        >
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input name="email" type="email" required className="input w-full" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input name="password" type="password" required className="input w-full" placeholder="••••••••" />
+          </div>
+          <button type="submit" className="btn btn-primary w-full h-12 text-base">Sign in</button>
+        </form>
+
+        <div className="my-4 flex items-center gap-2">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-ink-500 uppercase">or</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        <form
           action={async () => {
             "use server";
             await signIn("google", { redirectTo: searchParams.from || "/home" });
           }}
-          className="mt-6"
         >
-          <button type="submit" className="btn btn-primary w-full h-12 text-base">
+          <button type="submit" className="btn btn-secondary w-full h-12 text-base">
             <GoogleG className="mr-1" /> Continue with Google
           </button>
         </form>
-        <div className="mt-6 text-xs text-ink-500">
-          By continuing you agree to connect a single YouTube channel to this account. Channel connection is permanent and cannot be changed to bypass rewards.
-        </div>
+
+        <p className="mt-6 text-sm text-center text-ink-500">
+          No account? <a href={`/signup?from=${encodeURIComponent(searchParams.from || "/home")}`} className="text-brand-500 hover:underline">Create one</a>
+        </p>
       </div>
     </div>
   );

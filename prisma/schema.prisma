@@ -21,6 +21,7 @@ model User {
   name          String?
   image         String?
   username      String?  @unique
+  passwordHash  String?
   role          String   @default("USER") // USER | ADMIN
   status        String   @default("ACTIVE") // ACTIVE | SUSPENDED | BANNED
   createdAt     DateTime @default(now())

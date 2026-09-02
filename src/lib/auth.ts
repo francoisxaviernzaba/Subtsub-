@@ -1,7 +1,9 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./db";
+import bcrypt from "bcryptjs";
 import { getSettings } from "./settings";
 import { applySecrets } from "./secrets";
 
@@ -33,24 +35,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: { params: { prompt: "select_account" } },
-      // require verified email at provider level
+    }),
+    Credentials({
+      name: "Email & password",
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "you@example.com" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email.toLowerCase() },
+          select: { id: true, email: true, name: true, image: true, role: true, status: true, passwordHash: true },
+        });
+        if (!user || !user.passwordHash) return null;
+        if (user.status === "BANNED" || user.status === "SUSPENDED") return null;
+        const valid = await bcrypt.compare(credentials.password, user.passwordHash);
+        if (!valid) return null;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          role: user.role,
+          status: user.status,
+        };
+      },
     }),
   ],
   pages: {
     signIn: "/login",
   },
   callbacks: {
-    async signIn({ user, account }) {
-      // Only allow Google; account.provider check enforced by config
-      if (account?.provider !== "google") return false;
-      if (!user.email) return false;
-      // Check user status on subsequent sign-ins
-      const existing = await prisma.user.findUnique({ where: { email: user.email } });
-      if (existing && (existing.status === "BANNED" || existing.status === "SUSPENDED")) {
-        return false;
-      }
-      return true;
-    },
     async session({ session, user }) {
       if (session.user && user) {
         session.user.id = user.id;
@@ -64,12 +80,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   events: {
     async createUser({ user }) {
       if (!user.email) return;
-      // bootstrap admin role from env list
       const isAdmin = adminEmails.includes(user.email.toLowerCase());
       if (isAdmin) {
         await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
       }
-      // last seen
       await prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: new Date() } });
     },
     async signIn({ user }) {
