@@ -3,6 +3,10 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./db";
 import { getSettings } from "./settings";
+import { applySecrets } from "./secrets";
+
+// Apply SECRETS_BLOB to process.env on every cold start
+applySecrets();
 
 declare module "next-auth" {
   interface Session {
