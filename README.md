@@ -65,7 +65,36 @@ The `NEXTAUTH_URL` redirect URI for YouTube OAuth is **auto-derived** from `VERC
 - Per-user YouTube tokens are still encrypted in the database with AES-256-GCM
 - If you prefer not to use the blob, the individual env vars in `.env.example` also work — `applySecrets()` in `src/instrumentation.ts` falls back automatically
 
-### Required env (see `.env.example`)
+## Google OAuth setup
+
+1. **OAuth consent screen** (https://console.cloud.google.com/apis/credentials/consent)
+   - User type: **External**
+   - App name: `SUB2SUB`
+   - Support email: your email
+   - **Scopes** (add manually):
+     - `...openid`
+     - `.../auth/userinfo.email`
+     - `.../auth/userinfo.profile`
+     - `.../auth/youtube.readonly`
+     - `.../auth/youtube.force-ssl`
+   - **Test users**: add your email(s) (e.g. `you@gmail.com`)
+   - Save
+
+2. **OAuth clients** (https://console.cloud.google.com/apis/credentials)
+   - Create TWO clients ("Web application" type):
+   
+     **Client A — Sign-in**: authorized redirect URI:
+     ```
+     https://subtsub.vercel.app/api/auth/callback/google
+     ```
+
+     **Client B — YouTube**: authorized redirect URI:
+     ```
+     https://subtsub.vercel.app/api/youtube/callback
+     ```
+
+3. **API key** (same page → Create credentials → API key)
+   - Restrict to "YouTube Data API v3"
 
 - `DATABASE_URL` — SQLite path or Postgres URL
 - `AUTH_SECRET` — random 32+ chars
