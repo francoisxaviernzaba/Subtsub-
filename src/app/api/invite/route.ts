@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleError, HttpError } from "@/lib/api";
+import crypto from "node:crypto";
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,9 +41,8 @@ export async function POST(req: NextRequest) {
 
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.randomBytes(8);
   let out = "";
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
   for (let i = 0; i < 8; i++) out += chars[bytes[i] % chars.length];
   return out;
 }

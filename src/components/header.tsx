@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
-import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield } from "lucide-react";
+import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift } from "lucide-react";
 import { formatCoins } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationsPopover } from "./notifications-popover";
@@ -117,6 +117,7 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
                 </div>
                 <div className="border-t border-[rgb(var(--border))] my-1" />
                 <MenuLink href="/profile" icon={<UserIcon size={14} />}>Profile</MenuLink>
+                <MenuLink href="/invite" icon={<Gift size={14} />}>Invite & Earn</MenuLink>
                 <MenuLink href="/transactions" icon={<Coins size={14} />}>Transactions</MenuLink>
                 <MenuLink href="/settings" icon={<SettingsIcon size={14} />}>Settings</MenuLink>
                 {youtube && (
