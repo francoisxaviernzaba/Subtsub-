@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
-import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift } from "lucide-react";
+import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift, Flame, Trophy } from "lucide-react";
 import { formatCoins } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationsPopover } from "./notifications-popover";
+import { LevelBadge } from "./level-badge";
 
 type User = { id: string; name: string | null; email: string | null; image: string | null; role: string };
 type YT = { id: string; title: string; handle: string | null; thumbnailUrl: string | null } | null;
 
-export function Header({ user, balance, youtube }: { user: User; balance: number; youtube: YT }) {
+export function Header({ user, balance, youtube, xp, dailyStreak }: { user: User; balance: number; youtube: YT; xp: number; dailyStreak: number }) {
   const [openMenu, setOpenMenu] = useState(false);
   const [openNotif, setOpenNotif] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -69,6 +70,10 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
 
           <ThemeToggle />
 
+          <Link href="/quests" className="hidden sm:flex items-center gap-1 text-xs font-semibold text-ink-500 hover:text-brand-600">
+            <Flame size={14} /> {dailyStreak > 0 && <span>{dailyStreak}</span>}
+          </Link>
+
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setOpenMenu((v) => !v)}
@@ -98,10 +103,11 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
                       <img src={user.image} alt="" className="size-full object-cover" />
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="font-semibold text-sm truncate">{user.name || "User"}</div>
                     <div className="text-xs text-ink-500 truncate">{user.email}</div>
                   </div>
+                  <LevelBadge xp={xp} size="sm" />
                 </div>
                 <div className="border-t border-[rgb(var(--border))] my-1" />
                 <div className="px-3 py-2 text-xs">
@@ -123,6 +129,8 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
                 </div>
                 <div className="border-t border-[rgb(var(--border))] my-1" />
                 <MenuLink href="/profile" icon={<UserIcon size={14} />}>Profile</MenuLink>
+                <MenuLink href="/quests" icon={<Flame size={14} />}>Daily Quests</MenuLink>
+                <MenuLink href="/leaderboard" icon={<Trophy size={14} />}>Leaderboard</MenuLink>
                 <MenuLink href="/invite" icon={<Gift size={14} />}>Invite & Earn</MenuLink>
                 <MenuLink href="/transactions" icon={<Coins size={14} />}>Transactions</MenuLink>
                 <MenuLink href="/settings" icon={<SettingsIcon size={14} />}>Settings</MenuLink>

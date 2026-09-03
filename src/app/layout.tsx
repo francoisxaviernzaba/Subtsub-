@@ -44,6 +44,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const ytChannel = session?.user?.id
     ? await prisma.youTubeChannel.findUnique({ where: { userId: session.user.id } })
     : null;
+  const userGamification = session?.user?.id
+    ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { xp: true, dailyStreak: true } })
+    : null;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -61,6 +64,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 }}
                 balance={balance}
                 youtube={ytChannel ? { id: ytChannel.id, title: ytChannel.title, handle: ytChannel.handle, thumbnailUrl: ytChannel.thumbnailUrl } : null}
+                xp={userGamification?.xp ?? 0}
+                dailyStreak={userGamification?.dailyStreak ?? 0}
               />
             )}
             <main className="px-3 sm:px-5 pb-24 md:pb-8 pt-4">{children}</main>

@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { getSettings } from "./settings";
 import { applySecrets } from "./secrets";
 import { creditCoins } from "./coins";
+import { addXp, updateDailyStreak } from "./gamification";
 
 // Apply SECRETS_BLOB to process.env on every cold start
 applySecrets();
@@ -107,10 +108,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         }).catch(() => {});
       }
+      await addXp(user.id!, 50, "signup");
+      await updateDailyStreak(user.id!);
     },
     async signIn({ user }) {
       if (!user.id) return;
       await prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
+      await addXp(user.id, 5, "login").catch(() => {});
+      await updateDailyStreak(user.id).catch(() => {});
     },
   },
 });

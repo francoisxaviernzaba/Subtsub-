@@ -6,6 +6,7 @@ import { handleError, HttpError, withIdempotency } from "@/lib/api";
 import { rateLimit, getClientKey } from "@/lib/ratelimit";
 import { creditCoins } from "@/lib/coins";
 import { getSettings } from "@/lib/settings";
+import { addXp, updateDailyStreak, incrementDailyQuest } from "@/lib/gamification";
 
 const Body = z.object({
   campaignId: z.string().min(1),
@@ -96,11 +97,16 @@ export async function POST(req: NextRequest) {
         },
       }).catch(() => {});
 
+      // Gamification
+      await addXp(u!.user.id, 10, "watch_video");
+      await updateDailyStreak(u!.user.id);
+      await incrementDailyQuest(u!.user.id, "WATCH_VIDEOS");
+
       const after = await prisma.campaign.findUnique({ where: { id: campaignId } });
       if (after && after.spentBudget >= after.totalBudget) {
         await prisma.notification.create({
-      data: { userId: after.ownerId, kind: "BUDGET_EXHAUSTED", title: "Campaign budget exhausted", body: after.title, link: "/boost" },
-    }).catch(() => {});
+          data: { userId: after.ownerId, kind: "BUDGET_EXHAUSTED", title: "Campaign budget exhausted", body: after.title, link: "/boost" },
+        }).catch(() => {});
       }
 
       return { ok: true, reward: result.reward, balance: result.balance };

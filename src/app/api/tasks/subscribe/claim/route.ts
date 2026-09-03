@@ -8,6 +8,7 @@ import { checkSubscription } from "@/lib/youtube";
 import { decryptToken } from "@/lib/crypto";
 import { creditCoins } from "@/lib/coins";
 import { getSettings } from "@/lib/settings";
+import { addXp, updateDailyStreak, incrementDailyQuest } from "@/lib/gamification";
 
 const Body = z.object({
   campaignId: z.string().min(1),
@@ -132,6 +133,11 @@ export async function POST(req: NextRequest) {
           link: "/transactions",
         },
       }).catch(() => {});
+
+      // Gamification
+      await addXp(u!.user.id, 25, "subscribe");
+      await updateDailyStreak(u!.user.id);
+      await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
 
       // Check if budget exhausted for notification
       const after = await prisma.campaign.findUnique({ where: { id: result.campaign.id } });
