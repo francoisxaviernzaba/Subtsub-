@@ -51,6 +51,12 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
           >
             <Coins size={16} /> {formatCoins(balance)}
           </Link>
+          <Link
+            href="/coins"
+            className="hidden md:flex items-center gap-1.5 h-9 px-3 rounded-full bg-white/70 border border-white/40 text-sm font-semibold hover:bg-white/90"
+          >
+            Buy coins
+          </Link>
 
           <button
             onClick={() => setOpenNotif((v) => !v)}

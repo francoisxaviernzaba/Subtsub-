@@ -23,6 +23,11 @@ export const metadata: Metadata = {
   },
   twitter: { card: "summary_large_image", title: "SUB2SUB", description: "Watch. Subscribe. Earn. Boost." },
   robots: { index: true, follow: true },
+  verification: {
+    other: {
+      cryptomus: "8c73d583",
+    },
+  },
 };
 
 export const viewport: Viewport = {
