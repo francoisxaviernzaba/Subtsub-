@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     question: "What are the coin packages?",
-    answer: "We offer several coin packages: 500 coins, 1500 coins, 5000 coins, and 12000 coins. Prices vary by package. All purchases are processed securely through Gumroad.",
+    answer: "We offer several coin packages: 500 coins, 1500 coins, 5000 coins, and 12000 coins. Prices vary by package. All purchases are processed securely through Buy Me a Coffee.",
   },
   {
     question: "Can I get a refund?",

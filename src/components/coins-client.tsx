@@ -51,7 +51,7 @@ export function CoinsClient({ userEmail, balance, packages, recentPayments }: { 
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-ink-500 mt-2">You will be redirected to Gumroad to complete payment. Coins are credited automatically after purchase.</p>
+        <p className="text-[11px] text-ink-500 mt-2">You will be redirected to Buy Me a Coffee to complete payment. Coins are credited automatically after purchase.</p>
       </div>
 
       <div>

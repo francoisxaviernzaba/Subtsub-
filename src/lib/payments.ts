@@ -1,7 +1,7 @@
 /**
  * Payment provider abstraction. Implementations:
  *   - mock: instantly credits coins (for sandbox / dev)
- *   - gumroad: real payments via Gumroad (no business docs required)
+ *   - buymeacoffee: real payments via Buy Me a Coffee shop/extras
  *   - stripe: real Stripe checkout
  * Add more providers by implementing this interface.
  */
@@ -53,33 +53,34 @@ class MockProvider implements PaymentProvider {
   }
 }
 
-class GumroadProvider implements PaymentProvider {
-  name = "gumroad";
+class BuyMeACoffeeProvider implements PaymentProvider {
+  name = "buymeacoffee";
   private productMap: Record<number, string>;
+  private username: string;
 
   constructor() {
+    this.username = process.env.BUYMEACOFFEE_USERNAME || "";
     this.productMap = {
-      500: process.env.GUMROAD_PRODUCT_500 || "",
-      1500: process.env.GUMROAD_PRODUCT_1500 || "",
-      5000: process.env.GUMROAD_PRODUCT_5000 || "",
-      12000: process.env.GUMROAD_PRODUCT_12000 || "",
+      500: process.env.BUYMEACOFFEE_PRODUCT_500 || "",
+      1500: process.env.BUYMEACOFFEE_PRODUCT_1500 || "",
+      5000: process.env.BUYMEACOFFEE_PRODUCT_5000 || "",
+      12000: process.env.BUYMEACOFFEE_PRODUCT_12000 || "",
     };
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
-    const productId = this.productMap[input.coins];
-    if (!productId) {
-      throw new Error(`No Gumroad product configured for ${input.coins} coins`);
+    const productSlug = this.productMap[input.coins];
+    if (!productSlug) {
+      throw new Error(`No Buy Me a Coffee product configured for ${input.coins} coins`);
     }
-    const paymentId = input.metadata?.paymentId || `gumroad_${input.userId}_${Date.now()}`;
-    const params = new URLSearchParams();
-    params.set("email", input.metadata?.email || "");
-    params.set("user_id", input.metadata?.userId || input.userId);
-    params.set("payment_id", paymentId);
-    const checkoutUrl = `https://gum.co/${productId}?${params.toString()}`;
+    if (!this.username) {
+      throw new Error("BUYMEACOFFEE_USERNAME is not configured");
+    }
+    const paymentId = input.metadata?.paymentId || `bmac_${input.userId}_${Date.now()}`;
+    const checkoutUrl = `https://www.buymeacoffee.com/${this.username}/products/${productSlug}`;
     return {
       paymentId,
-      provider: "gumroad",
+      provider: "buymeacoffee",
       providerRef: paymentId,
       checkoutUrl,
       status: "PENDING",
@@ -103,7 +104,7 @@ class StripeProvider implements PaymentProvider {
 
 export function getPaymentProvider(): PaymentProvider {
   const name = (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
-  if (name === "gumroad") return new GumroadProvider();
+  if (name === "buymeacoffee" || name === "bmac") return new BuyMeACoffeeProvider();
   if (name === "stripe") return new StripeProvider();
   return new MockProvider();
 }
