@@ -27,7 +27,7 @@ export default async function AdminPage() {
   return (
     <AdminClient
       settings={settings}
-      users={users.map((x: any) => ({ id: x.id, email: x.email, name: x.name, role: x.role, status: x.status, createdAt: x.createdAt.toISOString(), yt: x.youtubeChannel ? { title: x.youtubeChannel.title, handle: x.youtubeChannel.handle, thumb: x.youtubeChannel.thumbnailUrl } : null }))}
+      users={users.map((x: any) => ({ id: x.id, email: x.email, name: x.name, role: x.role, status: x.status, createdAt: x.createdAt.toISOString(), updatedAt: x.updatedAt?.toISOString() ?? null, lastSeenAt: x.lastSeenAt?.toISOString() ?? null, xp: x.xp, level: x.level, dailyStreak: x.dailyStreak, totalEarned: x.totalEarned, bio: x.bio, publicProfile: x.publicProfile, yt: x.youtubeChannel ? { title: x.youtubeChannel.title, handle: x.youtubeChannel.handle, thumb: x.youtubeChannel.thumbnailUrl, subscriberCount: x.youtubeChannel.subscriberCount, verified: x.youtubeChannel.verified } : null }))}
       campaigns={campaigns.map((c: any) => ({ id: c.id, ownerEmail: c.owner.email, type: c.type, status: c.status, title: c.title, spent: c.spentBudget, budget: c.totalBudget, completed: c.completedActions, max: c.maxActions, createdAt: c.createdAt.toISOString() }))}
       payments={payments.map((p: any) => ({ id: p.id, userId: p.userId, coins: p.coins, amountCents: p.amountCents, status: p.status, createdAt: p.createdAt.toISOString() }))}
       totalCoins={totalCoins._sum.deltaCoins ?? 0}
