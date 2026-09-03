@@ -5,33 +5,31 @@ import crypto from "node:crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { merchant_id, order_id, status, uuid, amount, currency, sign } = body;
-
-    const apiKey = process.env.CRYPTOMUS_API_KEY || "";
+    const apiKey = process.env.SHKEEPER_API_KEY || "";
     if (!apiKey) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    // Verify signature
-    const data = body as Record<string, any>;
-    const filtered: Record<string, string> = {};
-    for (const [k, v] of Object.entries(data)) {
-      if (k === "sign") continue;
-      if (v !== undefined && v !== null) filtered[k] = String(v);
-    }
-    const payload = Object.keys(filtered)
-      .sort()
-      .map((k) => `${k}${filtered[k]}`)
-      .join("");
-    const expectedSign = crypto.createHash("md5").update(`${merchant_id}${apiKey}${payload}`).digest("hex");
-    if (sign !== expectedSign) {
+    const timestamp = req.headers.get("X-Shkeeper-Timestamp");
+    const signature = req.headers.get("X-Shkeeper-Signature");
+    if (!timestamp || !signature) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    // Find payment by providerRef
+    const rawBody = await req.text();
+    const expectedSign = crypto.createHmac("sha256", apiKey).update(`${timestamp}.${rawBody}`).digest("hex");
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSign))) {
+      return NextResponse.json({ ok: false }, { status: 400 });
+    }
+
+    const payload = JSON.parse(rawBody);
+    const externalId = payload.external_id;
+    if (!externalId) {
+      return NextResponse.json({ ok: false }, { status: 400 });
+    }
+
     const payment = await prisma.payment.findFirst({
-      where: { provider: "cryptomus", providerRef: uuid || order_id },
+      where: { provider: "shkeeper", providerRef: externalId },
       include: { user: true },
     });
 
@@ -43,7 +41,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    if (status === "paid" || status === "completed") {
+    if (payload.status === "PAID" || payload.status === "OVERPAID") {
+      const amount = payload.balance_fiat ? parseFloat(payload.balance_fiat) : null;
       await prisma.$transaction(async (tx) => {
         await tx.payment.update({
           where: { id: payment.id },
@@ -56,12 +55,12 @@ export async function POST(req: NextRequest) {
             type: "COIN_PURCHASE",
             referenceType: "Payment",
             referenceId: payment.id,
-            note: `Cryptomus payment ${uuid}`,
-            idempotencyKey: `cryptomus.credit.${payment.id}`,
+            note: `SHKeeper payment ${externalId}`,
+            idempotencyKey: `shkeeper.credit.${payment.id}`,
           });
         }
       });
-    } else if (status === "failed" || status === "canceled") {
+    } else if (payload.status === "PARTIAL" || payload.status === "FAILED" || payload.status === "CANCELED") {
       await prisma.payment.update({
         where: { id: payment.id },
         data: { status: "FAILED" },

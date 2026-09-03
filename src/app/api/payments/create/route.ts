@@ -23,6 +23,19 @@ export async function POST(req: NextRequest) {
 
     const origin = new URL(req.url).origin;
     const currency = body.currency || "USD";
+
+    // Create PENDING payment first so we have an ID to use as external_id
+    const p = await prisma.payment.create({
+      data: {
+        userId: u!.user.id,
+        provider: provider.name,
+        status: "PENDING",
+        coins: body.coins,
+        amountCents: body.amountCents,
+        currency: body.currency,
+      },
+    });
+
     const intent = await provider.createPayment({
       userId: u.user.id,
       coins: body.coins,
@@ -30,23 +43,20 @@ export async function POST(req: NextRequest) {
       currency,
       successUrl: `${origin}/coins?status=success`,
       cancelUrl: `${origin}/coins?status=cancelled`,
+      metadata: { paymentId: p.id },
+    });
+
+    // Update payment with provider ref
+    await prisma.payment.update({
+      where: { id: p.id },
+      data: { providerRef: intent.providerRef },
     });
 
     if (intent.status === "SUCCEEDED" || intent.mock) {
-      // atomic: create payment + credit
       const result = await prisma.$transaction(async (tx) => {
-        const p = await tx.payment.create({
-          data: {
-            userId: u!.user.id,
-            provider: provider.name,
-            providerRef: intent.providerRef,
-            status: "SUCCEEDED",
-            coins: body.coins,
-            amountCents: body.amountCents,
-            currency,
-            completedAt: new Date(),
-            metadata: JSON.stringify({ mock: !!intent.mock }),
-          },
+        const updated = await tx.payment.update({
+          where: { id: p.id },
+          data: { status: "SUCCEEDED", completedAt: new Date() },
         });
         const credit = await creditCoins({
           userId: u!.user.id,
@@ -57,7 +67,7 @@ export async function POST(req: NextRequest) {
           note: `Purchased ${body.coins} coins`,
           idempotencyKey: `pay.credit.${p.id}`,
         });
-        return { paymentId: p.id, credited: body.coins, balance: credit.balance };
+        return { paymentId: updated.id, credited: body.coins, balance: credit.balance };
       });
       await prisma.notification.create({
         data: { userId: u.user.id, kind: "COIN_PURCHASE", title: `+${body.coins} coins`, body: "Purchase credited", link: "/transactions" },
@@ -65,19 +75,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, mock: true, ...result });
     }
 
-    // For real providers: create PENDING payment and return checkoutUrl
-    const p = await prisma.payment.create({
-      data: {
-        userId: u.user.id,
-        provider: provider.name,
-        providerRef: intent.providerRef,
-        status: "PENDING",
-        coins: body.coins,
-        amountCents: body.amountCents,
-        currency: body.currency,
-      },
-    });
-    return NextResponse.json({ ok: true, paymentId: p.id, provider: provider.name, checkoutUrl: intent.checkoutUrl, providerRef: intent.providerRef });
+    return NextResponse.json({ ok: true, paymentId: p.id, provider: provider.name, checkoutUrl: intent.checkoutUrl, checkoutAddress: intent.checkoutAddress, checkoutAmount: intent.checkoutAmount, providerRef: intent.providerRef });
   } catch (e) {
     return handleError(e);
   }

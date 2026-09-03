@@ -10,21 +10,25 @@ type Payment = { id: string; coins: number; amountCents: number; currency: strin
 
 export function CoinsClient({ balance, packages, recentPayments }: { balance: number; packages: Pkg[]; recentPayments: Payment[] }) {
   const [busy, setBusy] = useState<number | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<{ address?: string; amount?: string; provider?: string } | null>(null);
 
   async function buy(pkg: Pkg) {
     setBusy(pkg.coins);
+    setPaymentDetails(null);
     try {
       const r = await fetch("/api/payments/create", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ coins: pkg.coins, amountCents: pkg.amountCents, currency: pkg.currency }) });
       const j = await r.json();
       if (!r.ok) { toast({ title: "Purchase failed", description: j?.error?.message, variant: "error" }); return; }
       if (j.mock) {
-        // For the mock provider, the API directly credits and returns success
         toast({ title: `+${j.credited} coins`, description: "Mock purchase credited instantly.", variant: "success" });
         setTimeout(() => location.reload(), 500);
+      } else if (j.checkoutAddress) {
+        setPaymentDetails({ address: j.checkoutAddress, amount: j.checkoutAmount, provider: j.provider });
+        toast({ title: "Payment created", description: "Send crypto to the address below.", variant: "success" });
+      } else if (j.checkoutUrl) {
+        window.location.href = j.checkoutUrl;
       } else {
-        // Real provider would redirect to checkout
-        if (j.checkoutUrl) window.location.href = j.checkoutUrl;
-        else toast({ title: "Purchase created", description: j.providerRef });
+        toast({ title: "Payment created", description: "Check your payment details.", variant: "success" });
       }
     } finally {
       setBusy(null);
@@ -40,6 +44,16 @@ export function CoinsClient({ balance, packages, recentPayments }: { balance: nu
 
       <div>
         <h2 className="font-semibold mb-2">Top up</h2>
+        {paymentDetails && (
+          <div className="card p-4 mb-4 space-y-2">
+            <div className="text-sm font-semibold">Pay with {paymentDetails.provider}</div>
+            <div className="text-xs text-ink-500">Send exactly this amount:</div>
+            <div className="text-lg font-extrabold">{paymentDetails.amount}</div>
+            <div className="text-xs text-ink-500">To this address:</div>
+            <div className="font-mono text-xs break-all p-2 bg-[rgb(var(--border))]/40 rounded">{paymentDetails.address}</div>
+            <p className="text-xs text-ink-500">Coins will be credited automatically after network confirmation.</p>
+          </div>
+        )}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {packages.map((p) => (
             <div key={p.coins} className="card p-4 flex flex-col">

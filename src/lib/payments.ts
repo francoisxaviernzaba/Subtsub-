@@ -1,7 +1,7 @@
 /**
  * Payment provider abstraction. Implementations:
  *   - mock: instantly credits coins (for sandbox / dev)
- *   - cryptomus: real crypto payments via Cryptomus
+ *   - shkeeper: real crypto payments via SHKeeper (open-source)
  *   - stripe: real Stripe checkout
  * Add more providers by implementing this interface.
  */
@@ -23,6 +23,8 @@ export type CreatePaymentResult = {
   provider: string;
   providerRef: string;
   checkoutUrl?: string;
+  checkoutAddress?: string;
+  checkoutAmount?: string;
   status: "PENDING" | "SUCCEEDED" | "FAILED";
   mock?: boolean;
 };
@@ -55,82 +57,76 @@ class MockProvider implements PaymentProvider {
   }
 }
 
-class CryptomusProvider implements PaymentProvider {
-  name = "cryptomus";
-  private merchantId: string;
+class ShkeeperProvider implements PaymentProvider {
+  name = "shkeeper";
   private apiKey: string;
-  private baseUrl = "https://api.cryptomus.com/v1";
+  private baseUrl: string;
+  private crypto: string;
 
   constructor() {
-    this.merchantId = process.env.CRYPTOMUS_MERCHANT_ID || "";
-    this.apiKey = process.env.CRYPTOMUS_API_KEY || "";
+    this.apiKey = process.env.SHKEEPER_API_KEY || "";
+    this.baseUrl = (process.env.SHKEEPER_BASE_URL || "https://demo.shkeeper.io").replace(/\/$/, "");
+    this.crypto = process.env.SHKEEPER_CRYPTO || "BTC";
   }
 
-  private sign(params: Record<string, string>): string {
-    const filtered: Record<string, string> = {};
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== null) filtered[k] = String(v);
-    }
-    const data = Object.keys(filtered)
-      .sort()
-      .map((k) => `${k}${filtered[k]}`)
-      .join("");
-    return crypto.createHash("md5").update(`${this.merchantId}${this.apiKey}${data}`).digest("hex");
-  }
-
-  private async request(path: string, body: Record<string, any>) {
-    const sign = this.sign(body);
+  private async request(path: string, init: RequestInit): Promise<any> {
     const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
+      ...init,
       headers: {
         "Content-Type": "application/json",
-        merchant: this.merchantId,
-        sign,
+        "X-Shkeeper-Api-Key": this.apiKey,
+        ...(init.headers || {}),
       },
-      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`Cryptomus API error ${res.status}: ${text}`);
+      throw new Error(`SHKeeper API error ${res.status}: ${text}`);
     }
     const json = await res.json();
-    if (json.state !== 0) {
-      throw new Error(json.message || "Cryptomus request failed");
+    if (json.status === "error") {
+      throw new Error(json.message || "SHKeeper request failed");
     }
-    return json.result;
+    return json;
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
-    if (!this.merchantId || !this.apiKey) {
-      throw new Error("Cryptomus credentials are not configured");
-    }
-    const orderId = `sub2sub_${input.userId}_${Date.now()}`;
+    if (!this.apiKey) throw new Error("SHKeeper credentials are not configured");
+
+    const externalId = input.metadata?.paymentId || `sub2sub_${input.userId}_${Date.now()}`;
     const amount = (input.amountCents / 100).toFixed(2);
-    const body: Record<string, string> = {
+    const callbackUrl = `${process.env.NEXTAUTH_URL}/api/payments/shkeeper/webhook`;
+
+    const body = {
+      external_id: externalId,
+      fiat: input.currency,
       amount,
-      currency: input.currency,
-      order_id: orderId,
-      url_redirect: input.successUrl,
-      url_callback: `${process.env.NEXTAUTH_URL}/api/payments/cryptomus/webhook`,
-      lifetime: String(3600),
+      callback_url: callbackUrl,
     };
-    const result = await this.request("/payment", body);
+
+    const result = await this.request(`/api/v1/${encodeURIComponent(this.crypto)}/payment_request`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+
     return {
-      paymentId: result.uuid || orderId,
-      provider: "cryptomus",
-      providerRef: result.uuid || orderId,
-      checkoutUrl: result.url,
+      paymentId: externalId,
+      provider: "shkeeper",
+      providerRef: externalId,
+      checkoutUrl: result.wallet,
+      checkoutAddress: result.wallet,
+      checkoutAmount: result.amount,
       status: "PENDING",
     };
   }
 
   async verifyPayment(providerRef: string): Promise<VerifyPaymentResult> {
-    if (!this.merchantId || !this.apiKey) {
-      return { status: "PENDING" };
-    }
+    if (!this.apiKey) return { status: "PENDING" };
     try {
-      const result = await this.request(`/payment/${encodeURIComponent(providerRef)}`, {});
-      const status = result.status === "paid" || result.status === "completed" ? "SUCCEEDED" : result.status === "failed" || result.status === "canceled" ? "FAILED" : "PENDING";
+      const result = await this.request(`/api/v1/invoices/${encodeURIComponent(providerRef)}`, { method: "GET" });
+      const invoices = result.invoices || [];
+      const invoice = invoices[0];
+      if (!invoice) return { status: "PENDING" };
+      const status = invoice.status === "PAID" || invoice.status === "OVERPAID" ? "SUCCEEDED" : invoice.status === "FAILED" || invoice.status === "CANCELED" ? "FAILED" : "PENDING";
       return { status, providerRef };
     } catch {
       return { status: "PENDING" };
@@ -150,7 +146,7 @@ class StripeProvider implements PaymentProvider {
 
 export function getPaymentProvider(): PaymentProvider {
   const name = (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
-  if (name === "cryptomus") return new CryptomusProvider();
+  if (name === "shkeeper") return new ShkeeperProvider();
   if (name === "stripe") return new StripeProvider();
   return new MockProvider();
 }
