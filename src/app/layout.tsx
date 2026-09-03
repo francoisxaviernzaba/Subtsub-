@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { Header } from "@/components/header";
 import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/toast";
+import { OrganizationSchema, WebApplicationSchema } from "@/components/schema";
 
 export const metadata: Metadata = {
   title: { default: "SUB2SUB — Earn coins, grow your channel", template: "%s · SUB2SUB" },
@@ -52,6 +53,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <Providers>
+          <OrganizationSchema />
+          <WebApplicationSchema />
           <div className="mx-auto max-w-[1600px]">
             {session?.user && (
               <Header

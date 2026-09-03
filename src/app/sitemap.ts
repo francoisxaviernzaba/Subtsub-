@@ -1,9 +1,16 @@
-import type { MetadataRoute } from "next";
+import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  return [
-    { url: `${base}/`, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
-    { url: `${base}/login`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
+  const base = process.env.NEXTAUTH_URL || "https://subtsub.vercel.app";
+  const routes = [
+    "", "/s2s", "/boost", "/discover", "/coins", "/profile", "/settings",
+    "/invite", "/leaderboard", "/quests", "/faq", "/alternatives", "/blog",
+    "/login", "/signup",
   ];
+  return routes.map((r) => ({
+    url: `${base}${r}`,
+    lastModified: new Date(),
+    changeFrequency: "daily" as const,
+    priority: r === "" ? 1 : 0.8,
+  }));
 }
