@@ -10,8 +10,7 @@ import { rateLimit, getClientKey } from "@/lib/ratelimit";
 
 const Body = z.object({
   url: z.string().min(1),
-  reward: z.number().int().min(1),
-  budget: z.number().int().min(1),
+  views: z.number().int().min(1).max(1_000_000),
 });
 
 export async function POST(req: NextRequest) {
@@ -22,14 +21,15 @@ export async function POST(req: NextRequest) {
     const body = await parseJson(req, Body);
     const settings = await getSettings();
 
-    if (body.reward < settings.minRewardPerAction || body.reward > settings.maxRewardPerAction) {
-      throw new HttpError(400, "BAD_REWARD", `Reward must be ${settings.minRewardPerAction}-${settings.maxRewardPerAction}`);
+    // Reward and budget are fixed by admin; we calculate from views × viewRewardCoins
+    const reward = settings.viewRewardCoins;
+    const budget = body.views * reward;
+
+    if (reward < settings.minRewardPerAction || reward > settings.maxRewardPerAction) {
+      throw new HttpError(500, "BAD_REWARD", `Server reward config invalid: ${settings.minRewardPerAction}-${settings.maxRewardPerAction}`);
     }
-    if (body.budget < settings.minBudget || body.budget > settings.maxBudget) {
-      throw new HttpError(400, "BAD_BUDGET", `Budget must be ${settings.minBudget}-${settings.maxBudget}`);
-    }
-    if (body.budget % body.reward !== 0) {
-      throw new HttpError(400, "BAD_DIVISION", "Budget must be divisible by reward");
+    if (budget < settings.minBudget || budget > settings.maxBudget) {
+      throw new HttpError(400, "BAD_BUDGET", `Budget must be ${settings.minBudget}-${settings.maxBudget} (you'll get ${budget} from ${body.views} views)`);
     }
 
     const id = parseVideoId(body.url);
@@ -44,16 +44,16 @@ export async function POST(req: NextRequest) {
       throw new HttpError(403, "NOT_OWNER", "This video does not belong to your connected YouTube channel");
     }
 
-    const maxActions = Math.floor(body.budget / body.reward);
+    const maxActions = body.views;
     const result = await prisma.$transaction(async (tx) => {
       // Debit coins atomically
       const debit = await debitCoins({
         userId: u!.user.id,
-        amount: body.budget,
+        amount: budget,
         type: "BOOST_SPEND",
         referenceType: "Campaign",
-        note: `Boost video: ${v.title}`,
-        idempotencyKey: `boost.video.${u!.user.id}.${v.id}.${body.budget}`,
+        note: `Boost video: ${v.title} (${body.views} views)`,
+        idempotencyKey: `boost.video.${u!.user.id}.${v.id}.${budget}`,
       });
       const camp = await tx.campaign.create({
         data: {
@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
           youtubeVideoId: v.id,
           title: v.title.slice(0, 200),
           thumbnailUrl: v.thumbnailUrl || ytThumbFromVideoId(v.id),
-          rewardPerAction: body.reward,
-          totalBudget: body.budget,
+          rewardPerAction: reward,
+          totalBudget: budget,
           spentBudget: 0,
           maxActions,
           completedActions: 0,
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       },
     }).catch(() => {});
 
-    return NextResponse.json({ ok: true, campaignId: result.camp.id, balance: result.balance });
+    return NextResponse.json({ ok: true, campaignId: result.camp.id, balance: result.balance, totalCost: budget, rewardPerView: reward });
   } catch (e) {
     return handleError(e);
   }

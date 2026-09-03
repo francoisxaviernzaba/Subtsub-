@@ -77,11 +77,14 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 
 function VideoWizard({ settings, balance }: { settings: Settings; balance: number }) {
   const [url, setUrl] = useState("");
-  const [reward, setReward] = useState<number>(settings.viewRewardCoins);
-  const [budget, setBudget] = useState<number>(500);
+  const [views, setViews] = useState<number>(50);
   const [submitting, setSubmitting] = useState(false);
   const [preview, setPreview] = useState<{ id: string; title: string; thumbnail: string; channelTitle: string; durationSec: number } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  // Coin cost is fixed by admin (settings.viewRewardCoins per view)
+  const reward = settings.viewRewardCoins;
+  const budget = views * reward;
 
   async function lookup() {
     setErr(null); setPreview(null);
@@ -98,7 +101,7 @@ function VideoWizard({ settings, balance }: { settings: Settings; balance: numbe
       const r = await fetch("/api/campaigns/video", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url, reward, budget }),
+        body: JSON.stringify({ url, views }),
       });
       const j = await r.json();
       if (!r.ok) { setErr(j?.error?.message || "Failed"); return; }
@@ -109,8 +112,7 @@ function VideoWizard({ settings, balance }: { settings: Settings; balance: numbe
     }
   }
 
-  const actions = reward > 0 ? Math.floor(budget / reward) : 0;
-  const valid = url && reward >= settings.minRewardPerAction && reward <= settings.maxRewardPerAction && budget >= settings.minBudget && budget <= settings.maxBudget && reward <= balance;
+  const valid = url && views >= 1 && views <= 1_000_000 && budget >= settings.minBudget && budget <= settings.maxBudget && budget <= balance && preview;
 
   return (
     <div className="space-y-4">
@@ -133,25 +135,33 @@ function VideoWizard({ settings, balance }: { settings: Settings; balance: numbe
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-sm font-medium">Reward per view (🪙)</label>
-          <input type="number" min={1} value={reward} onChange={(e) => setReward(Number(e.target.value))} className="input mt-1" />
-          <div className="text-[11px] text-ink-500 mt-1">Min {settings.minRewardPerAction} · Max {settings.maxRewardPerAction}</div>
+      <div>
+        <label className="text-sm font-medium">How many views do you want?</label>
+        <input
+          type="number"
+          min={1}
+          value={views}
+          onChange={(e) => setViews(Math.max(1, Number(e.target.value) || 0))}
+          className="input mt-1"
+        />
+        <div className="text-[11px] text-ink-500 mt-1">Min 1, max 1,000,000</div>
+      </div>
+
+      <div className="card p-3 bg-[rgb(var(--border))]/30 space-y-1">
+        <div className="text-sm flex items-center justify-between">
+          <span className="text-ink-500">Cost per view</span>
+          <span className="font-semibold">{formatCoins(reward)} 🪙</span>
         </div>
-        <div>
-          <label className="text-sm font-medium">Total budget (🪙)</label>
-          <input type="number" min={1} value={budget} onChange={(e) => setBudget(Number(e.target.value))} className="input mt-1" />
-          <div className="text-[11px] text-ink-500 mt-1">Min {settings.minBudget} · Max {settings.maxBudget}</div>
+        <div className="text-sm flex items-center justify-between">
+          <span className="text-ink-500">Total cost</span>
+          <span className="font-extrabold text-base">{formatCoins(budget)} 🪙</span>
+        </div>
+        <div className="text-[11px] text-ink-500 pt-1 border-t border-[rgb(var(--border))]">
+          Viewers must watch at least {settings.minWatchSeconds}s in-app to earn their reward. Watch time is verified by YouTube IFrame API and resets on pause/buffer/seek.
         </div>
       </div>
 
-      <div className="card p-3 bg-[rgb(var(--border))]/30">
-        <div className="text-sm">Estimated rewarded views: <span className="font-bold">{actions}</span></div>
-        <div className="text-xs text-ink-500">After {settings.minWatchSeconds}s minimum watch, verified by YouTube</div>
-      </div>
-
-      {reward > balance && <div className="text-sm text-rose-600">You need {reward - balance} more coins. <Link className="underline" href="/coins">Buy coins</Link></div>}
+      {budget > balance && <div className="text-sm text-rose-600">You need {formatCoins(budget - balance)} more coins. <Link className="underline" href="/coins">Buy coins</Link></div>}
       {err && <div className="text-sm text-rose-600">{err}</div>}
 
       <button onClick={submit} disabled={!valid || submitting} className="btn btn-primary w-full">
@@ -162,13 +172,15 @@ function VideoWizard({ settings, balance }: { settings: Settings; balance: numbe
 }
 
 function SubscriberWizard({ settings, balance }: { settings: Settings; balance: number }) {
-  const [targetChannel, setTargetChannel] = useState<"connected" | "other">("connected");
   const [channelUrl, setChannelUrl] = useState("");
-  const [reward, setReward] = useState<number>(settings.subscribeRewardCoins);
   const [subs, setSubs] = useState<number>(10);
   const [submitting, setSubmitting] = useState(false);
   const [preview, setPreview] = useState<{ id: string; title: string; thumbnail: string; handle: string | null } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
+  // Reward per sub is fixed by admin (settings.subscribeRewardCoins)
+  const reward = settings.subscribeRewardCoins;
+  const budget = subs * reward;
 
   async function lookup() {
     setErr(null); setPreview(null);
@@ -178,16 +190,13 @@ function SubscriberWizard({ settings, balance }: { settings: Settings; balance: 
     setPreview(j.channel);
   }
 
-  const budget = subs * reward;
-  const valid = reward >= settings.minRewardPerAction && reward <= settings.maxRewardPerAction && subs >= 1 && subs <= 100000 && budget <= balance && preview;
-
   async function submit() {
     setSubmitting(true); setErr(null);
     try {
       const r = await fetch("/api/campaigns/subscriber", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ targetChannelId: preview?.id, reward, targetSubscribers: subs }),
+        body: JSON.stringify({ targetChannelId: preview?.id, targetSubscribers: subs }),
       });
       const j = await r.json();
       if (!r.ok) { setErr(j?.error?.message || "Failed"); return; }
@@ -197,6 +206,8 @@ function SubscriberWizard({ settings, balance }: { settings: Settings; balance: 
       setSubmitting(false);
     }
   }
+
+  const valid = subs >= 1 && subs <= 100000 && budget >= settings.minBudget && budget <= settings.maxBudget && budget <= balance && preview;
 
   return (
     <div className="space-y-4">
@@ -219,23 +230,33 @@ function SubscriberWizard({ settings, balance }: { settings: Settings; balance: 
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-sm font-medium">Reward per sub (🪙)</label>
-          <input type="number" min={1} value={reward} onChange={(e) => setReward(Number(e.target.value))} className="input mt-1" />
+      <div>
+        <label className="text-sm font-medium">How many subscribers do you want?</label>
+        <input
+          type="number"
+          min={1}
+          value={subs}
+          onChange={(e) => setSubs(Math.max(1, Number(e.target.value) || 0))}
+          className="input mt-1"
+        />
+        <div className="text-[11px] text-ink-500 mt-1">Min 1, max 100,000</div>
+      </div>
+
+      <div className="card p-3 bg-[rgb(var(--border))]/30 space-y-1">
+        <div className="text-sm flex items-center justify-between">
+          <span className="text-ink-500">Cost per sub</span>
+          <span className="font-semibold">{formatCoins(reward)} 🪙</span>
         </div>
-        <div>
-          <label className="text-sm font-medium">Target subscribers</label>
-          <input type="number" min={1} value={subs} onChange={(e) => setSubs(Number(e.target.value))} className="input mt-1" />
+        <div className="text-sm flex items-center justify-between">
+          <span className="text-ink-500">Total cost</span>
+          <span className="font-extrabold text-base">{formatCoins(budget)} 🪙</span>
+        </div>
+        <div className="text-[11px] text-ink-500 pt-1 border-t border-[rgb(var(--border))]">
+          Subscribers must verify ownership of a YouTube account. The coin reward is fixed by admin and cannot be changed per campaign.
         </div>
       </div>
 
-      <div className="card p-3 bg-[rgb(var(--border))]/30">
-        <div className="text-sm">Total budget: <span className="font-bold">{formatCoins(budget)} 🪙</span></div>
-        <div className="text-xs text-ink-500">Coins debited atomically on campaign creation.</div>
-      </div>
-
-      {budget > balance && <div className="text-sm text-rose-600">You need {budget - balance} more coins. <Link className="underline" href="/coins">Buy coins</Link></div>}
+      {budget > balance && <div className="text-sm text-rose-600">You need {formatCoins(budget - balance)} more coins. <Link className="underline" href="/coins">Buy coins</Link></div>}
       {err && <div className="text-sm text-rose-600">{err}</div>}
 
       <button onClick={submit} disabled={!valid || submitting} className="btn btn-primary w-full">

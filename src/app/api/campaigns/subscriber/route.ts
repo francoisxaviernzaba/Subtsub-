@@ -10,7 +10,6 @@ import { rateLimit, getClientKey } from "@/lib/ratelimit";
 
 const Body = z.object({
   targetChannelId: z.string().min(1),
-  reward: z.number().int().min(1),
   targetSubscribers: z.number().int().min(1).max(100000),
 });
 
@@ -22,8 +21,10 @@ export async function POST(req: NextRequest) {
     const body = await parseJson(req, Body);
     const settings = await getSettings();
 
-    if (body.reward < settings.minRewardPerAction || body.reward > settings.maxRewardPerAction) {
-      throw new HttpError(400, "BAD_REWARD", `Reward must be ${settings.minRewardPerAction}-${settings.maxRewardPerAction}`);
+    // Reward per sub is fixed by admin
+    const reward = settings.subscribeRewardCoins;
+    if (reward < settings.minRewardPerAction || reward > settings.maxRewardPerAction) {
+      throw new HttpError(500, "BAD_REWARD", `Server reward config invalid: ${settings.minRewardPerAction}-${settings.maxRewardPerAction}`);
     }
 
     const ch = await getChannelById(body.targetChannelId);
@@ -36,8 +37,9 @@ export async function POST(req: NextRequest) {
       throw new HttpError(403, "NOT_OWNER", "Target channel must be your connected YouTube channel");
     }
 
-    const totalBudget = body.reward * body.targetSubscribers;
+    const totalBudget = reward * body.targetSubscribers;
     if (totalBudget > settings.maxBudget) throw new HttpError(400, "OVER_BUDGET", `Total budget exceeds max (${settings.maxBudget})`);
+    if (totalBudget < settings.minBudget) throw new HttpError(400, "UNDER_BUDGET", `Total budget below min (${settings.minBudget})`);
 
     const result = await prisma.$transaction(async (tx) => {
       const debit = await debitCoins({
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
         amount: totalBudget,
         type: "BOOST_SPEND",
         referenceType: "Campaign",
-        note: `Boost S2S: ${ch.title}`,
+        note: `Boost S2S: ${ch.title} (${body.targetSubscribers} subs)`,
         idempotencyKey: `boost.sub.${u!.user.id}.${ch.id}.${totalBudget}`,
       });
       const camp = await tx.campaign.create({
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
           youtubeChannelId: ch.id,
           title: `@${ch.handle || ch.title}`.slice(0, 200),
           thumbnailUrl: ch.thumbnailUrl ?? null,
-          rewardPerAction: body.reward,
+          rewardPerAction: reward,
           totalBudget,
           spentBudget: 0,
           maxActions: body.targetSubscribers,
@@ -70,7 +72,7 @@ export async function POST(req: NextRequest) {
       data: { userId: u.user.id, kind: "CAMPAIGN_ACTIVATED", title: "S2S campaign live", body: ch.title, link: "/boost" },
     }).catch(() => {});
 
-    return NextResponse.json({ ok: true, campaignId: result.camp.id, balance: result.balance });
+    return NextResponse.json({ ok: true, campaignId: result.camp.id, balance: result.balance, totalCost: totalBudget, rewardPerSub: reward });
   } catch (e) {
     return handleError(e);
   }

@@ -21,13 +21,12 @@ type Campaign = {
   owner: { name: string | null; image: string | null; youtubeChannel: { thumbnailUrl: string | null; title: string | null; handle: string | null } | null };
 };
 
-export function DiscoverGrid({ defaultMinReward }: { defaultMinReward: number }) {
+export function DiscoverGrid() {
   const [items, setItems] = useState<Campaign[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "VIDEO_VIEW" | "SUBSCRIBER">("ALL");
-  const [minReward, setMinReward] = useState<number>(0);
   const sentinel = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async (reset = false) => {
@@ -61,7 +60,6 @@ export function DiscoverGrid({ defaultMinReward }: { defaultMinReward: number })
 
   const filtered = items.filter((c) => {
     if (filter !== "ALL" && c.type !== filter) return false;
-    if (c.rewardPerAction < minReward) return false;
     return true;
   });
 
@@ -71,18 +69,6 @@ export function DiscoverGrid({ defaultMinReward }: { defaultMinReward: number })
         <FilterChip active={filter === "ALL"} onClick={() => setFilter("ALL")}>All</FilterChip>
         <FilterChip active={filter === "VIDEO_VIEW"} onClick={() => setFilter("VIDEO_VIEW")}>Videos</FilterChip>
         <FilterChip active={filter === "SUBSCRIBER"} onClick={() => setFilter("SUBSCRIBER")}>Subscribers</FilterChip>
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          <span className="text-ink-500">Min reward</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={minReward}
-            onChange={(e) => setMinReward(Number(e.target.value))}
-          />
-          <span className="w-12 text-right font-semibold">{minReward}+</span>
-        </div>
       </div>
 
       {items.length === 0 && !loading ? (
