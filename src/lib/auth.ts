@@ -6,7 +6,6 @@ import { prisma } from "./db";
 import bcrypt from "bcryptjs";
 import { getSettings } from "./settings";
 import { applySecrets } from "./secrets";
-import { autoConnectYouTubeChannel } from "./youtube-auto-connect";
 
 // Apply SECRETS_BLOB to process.env on every cold start
 applySecrets();
@@ -35,16 +34,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          prompt: "select_account",
-          access_type: "offline",
-          scope:
-            "openid email profile " +
-            "https://www.googleapis.com/auth/youtube.readonly " +
-            "https://www.googleapis.com/auth/youtube.force-ssl",
-        },
-      },
+      authorization: { params: { prompt: "select_account" } },
     }),
     Credentials({
       name: "Email & password",
@@ -98,13 +88,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       await prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: new Date() } });
     },
-    async signIn({ user, account }) {
+    async signIn({ user }) {
       if (!user.id) return;
       await prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: new Date() } }).catch(() => {});
-      // Auto-connect YouTube channel when signing in with Google OAuth
-      if (account?.provider === "google" && account?.access_token) {
-        await autoConnectYouTubeChannel(user.id, account.access_token, account.refresh_token);
-      }
     },
   },
 });
