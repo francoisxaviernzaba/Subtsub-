@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
-import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift, Flame, Trophy } from "lucide-react";
+import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift, Flame, Trophy, MessageSquare } from "lucide-react";
 import { formatCoins } from "@/lib/utils";
 import { formatHandle } from "@/lib/format-handle";
 import { ThemeToggle } from "./theme-toggle";
@@ -68,6 +68,7 @@ export function Header({ user, balance, youtube, xp, dailyStreak }: { user: User
             <Bell size={18} />
             <UnreadDot />
           </button>
+          {openNotif && <NotificationsPopover onClose={() => setOpenNotif(false)} />}
 
           <ThemeToggle />
 
@@ -130,6 +131,7 @@ export function Header({ user, balance, youtube, xp, dailyStreak }: { user: User
                 </div>
                 <div className="border-t border-[rgb(var(--border))] my-1" />
                 <MenuLink href="/profile" icon={<UserIcon size={14} />}>Profile</MenuLink>
+                <MenuLink href="/support" icon={<MessageSquare size={14} />}>Support</MenuLink>
                 <MenuLink href="/quests" icon={<Flame size={14} />}>Daily Quests</MenuLink>
                 <MenuLink href="/leaderboard" icon={<Trophy size={14} />}>Leaderboard</MenuLink>
                 <MenuLink href="/invite" icon={<Gift size={14} />}>Invite & Earn</MenuLink>

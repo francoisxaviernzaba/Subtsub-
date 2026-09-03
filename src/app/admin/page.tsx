@@ -27,9 +27,9 @@ export default async function AdminPage() {
   return (
     <AdminClient
       settings={settings}
-      users={users.map((x) => ({ id: x.id, email: x.email, name: x.name, role: x.role, status: x.status, createdAt: x.createdAt.toISOString(), yt: x.youtubeChannel ? { title: x.youtubeChannel.title, handle: x.youtubeChannel.handle, thumb: x.youtubeChannel.thumbnailUrl } : null }))}
-      campaigns={campaigns.map((c) => ({ id: c.id, ownerEmail: c.owner.email, type: c.type, status: c.status, title: c.title, spent: c.spentBudget, budget: c.totalBudget, completed: c.completedActions, max: c.maxActions, createdAt: c.createdAt.toISOString() }))}
-      payments={payments.map((p) => ({ id: p.id, userId: p.userId, coins: p.coins, amountCents: p.amountCents, status: p.status, createdAt: p.createdAt.toISOString() }))}
+      users={users.map((x: any) => ({ id: x.id, email: x.email, name: x.name, role: x.role, status: x.status, createdAt: x.createdAt.toISOString(), yt: x.youtubeChannel ? { title: x.youtubeChannel.title, handle: x.youtubeChannel.handle, thumb: x.youtubeChannel.thumbnailUrl } : null }))}
+      campaigns={campaigns.map((c: any) => ({ id: c.id, ownerEmail: c.owner.email, type: c.type, status: c.status, title: c.title, spent: c.spentBudget, budget: c.totalBudget, completed: c.completedActions, max: c.maxActions, createdAt: c.createdAt.toISOString() }))}
+      payments={payments.map((p: any) => ({ id: p.id, userId: p.userId, coins: p.coins, amountCents: p.amountCents, status: p.status, createdAt: p.createdAt.toISOString() }))}
       totalCoins={totalCoins._sum.deltaCoins ?? 0}
     />
   );
