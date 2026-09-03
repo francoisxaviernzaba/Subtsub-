@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
-import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, ChevronDown } from "lucide-react";
+import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield } from "lucide-react";
 import { formatCoins } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationsPopover } from "./notifications-popover";
@@ -25,17 +25,20 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 backdrop-blur-md border-b border-[rgb(var(--border))] bg-[rgb(var(--bg))]/80">
-      <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-14">
+    <header className="sticky top-2 sm:top-3 z-40 px-3 sm:px-5">
+      <div
+        className="mx-auto max-w-5xl flex items-center gap-2 sm:gap-3 h-14 px-3 sm:px-4 rounded-full border border-white/40 dark:border-white/10 shadow-lg shadow-black/5 backdrop-blur-xl bg-white/70 dark:bg-gray-950/60"
+        style={{ WebkitBackdropFilter: "blur(20px) saturate(180%)" }}
+      >
         <Link href="/s2s" className="flex items-center gap-2 font-extrabold tracking-tight">
-          <div className="size-8 rounded-xl bg-gradient-to-br from-brand-500 to-pink-500 grid place-items-center text-white text-sm shadow-glow">S2S</div>
+          <div className="size-8 rounded-2xl bg-gradient-to-br from-brand-500 to-pink-500 grid place-items-center text-white text-xs shadow-glow">S2S</div>
           <span className="hidden sm:inline">SUB2SUB</span>
         </Link>
 
-        <div className="flex-1 max-w-xl mx-auto">
+        <div className="flex-1 max-w-md">
           <Link
             href="/s2s"
-            className="hidden md:flex items-center gap-2 px-3 h-9 rounded-full bg-[rgb(var(--border))]/40 text-sm text-ink-500 hover:bg-[rgb(var(--border))]/70"
+            className="hidden md:flex items-center gap-2 px-3 h-9 rounded-full bg-white/40 dark:bg-white/5 border border-white/40 dark:border-white/10 text-sm text-ink-500 hover:bg-white/60"
           >
             <Search size={16} /> Discover videos & channels
           </Link>
@@ -51,7 +54,7 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
 
           <button
             onClick={() => setOpenNotif((v) => !v)}
-            className="relative size-9 grid place-items-center rounded-full hover:bg-[rgb(var(--border))]/60"
+            className="relative size-9 grid place-items-center rounded-full hover:bg-white/60 dark:hover:bg-white/10"
             aria-label="Notifications"
           >
             <Bell size={18} />
@@ -63,9 +66,9 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setOpenMenu((v) => !v)}
-              className="flex items-center gap-1.5 pl-1 pr-2 h-9 rounded-full hover:bg-[rgb(var(--border))]/60"
+              className="flex items-center gap-1.5 pl-1 pr-2 h-9 rounded-full hover:bg-white/60 dark:hover:bg-white/10"
             >
-              <div className="size-7 rounded-full overflow-hidden bg-[rgb(var(--border))]">
+              <div className="size-7 rounded-full overflow-hidden bg-[rgb(var(--border))] ring-2 ring-white/40">
                 {user.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.image} alt="" className="size-full object-cover" />
@@ -75,11 +78,13 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
                   </div>
                 )}
               </div>
-              <ChevronDown size={14} className="text-ink-400" />
             </button>
 
             {openMenu && (
-              <div className="absolute right-0 mt-2 w-72 card p-1.5 animate-fade-in">
+              <div
+                className="absolute right-0 mt-2 w-72 rounded-2xl border border-white/40 dark:border-white/10 p-1.5 shadow-2xl shadow-black/10 backdrop-blur-xl bg-white/90 dark:bg-gray-950/80 animate-fade-in"
+                style={{ WebkitBackdropFilter: "blur(20px) saturate(180%)" }}
+              >
                 <div className="px-3 py-2.5 flex items-center gap-3">
                   <div className="size-10 rounded-full overflow-hidden bg-[rgb(var(--border))]">
                     {user.image && (
@@ -123,7 +128,7 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
                 <div className="border-t border-[rgb(var(--border))] my-1" />
                 <button
                   onClick={() => signOut({ callbackUrl: "/login" })}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[rgb(var(--border))]/60 text-sm text-rose-600"
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 text-sm text-rose-600"
                 >
                   <LogOut size={14} /> Logout
                 </button>
@@ -132,15 +137,13 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
           </div>
         </div>
       </div>
-
-      {openNotif && <NotificationsPopover onClose={() => setOpenNotif(false)} />}
     </header>
   );
 }
 
 function MenuLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <Link href={href} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[rgb(var(--border))]/60 text-sm">
+    <Link href={href} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[rgb(var(--border))]/40 text-sm">
       <span className="text-ink-500">{icon}</span>
       {children}
     </Link>
@@ -167,6 +170,6 @@ function UnreadDot() {
   }, []);
   if (!count) return null;
   return (
-    <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-rose-500 ring-2 ring-[rgb(var(--bg))]" aria-label={`${count} unread`} />
+    <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-rose-500 ring-2 ring-white" aria-label={`${count} unread`} />
   );
 }

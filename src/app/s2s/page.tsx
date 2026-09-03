@@ -1,6 +1,5 @@
-import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { DiscoverGrid } from "@/components/discover-grid";
+import { S2SClient } from "@/components/s2s-client";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +12,7 @@ export default async function S2SPage() {
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Discover</h1>
         <p className="text-sm text-ink-500">Watch boosted videos in-app (30s minimum) or subscribe to channels. Verified by YouTube.</p>
       </div>
-      <DiscoverGrid />
+      <S2SClient />
     </div>
   );
 }

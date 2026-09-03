@@ -126,6 +126,18 @@ function UsersTable({ users }: { users: User[] }) {
 }
 
 function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+  async function preview(id: string) {
+    setBusyId(id);
+    const r = await fetch("/api/admin/preview-campaign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ campaignId: id }) });
+    setBusyId(null);
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      toast({ title: "Preview failed", description: j?.error?.message, variant: "error" });
+      return;
+    }
+    toast({ title: "Marked as previewed", description: "View-only — no coins credited, no budget counted.", variant: "success" });
+  }
   return (
     <div className="card divide-y divide-[rgb(var(--border))]">
       {campaigns.map((c) => (
@@ -135,7 +147,17 @@ function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
               <div className="text-sm font-semibold truncate">{c.title}</div>
               <div className="text-xs text-ink-500">{c.ownerEmail} · {c.type} · {c.status}</div>
             </div>
-            <div className="text-xs">{c.completed}/{c.max} · {c.spent}/{c.budget} 🪙</div>
+            <div className="flex items-center gap-2">
+              <div className="text-xs">{c.completed}/{c.max} · {c.spent}/{c.budget} 🪙</div>
+              <button
+                onClick={() => preview(c.id)}
+                disabled={busyId === c.id}
+                className="btn btn-outline h-7 px-2 text-xs"
+                title="Mark as viewed by admin (no reward, no budget counted)"
+              >
+                {busyId === c.id ? "…" : "View"}
+              </button>
+            </div>
           </div>
         </div>
       ))}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Coins, Eye, Users, Pause, Play, Trash2, Youtube, ExternalLink, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Coins, Eye, Users, Pause, Play, Trash2, Youtube, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "./toast";
@@ -44,7 +44,7 @@ export function BoostClient({ balance, connected, youtube, settings, campaigns }
           <TabBtn active={tab === "SUBSCRIBER"} onClick={() => setTab("SUBSCRIBER")}><Users size={14} /> Subscriber boost</TabBtn>
         </div>
         <div className="mt-5">
-          {tab === "VIDEO_VIEW" ? <VideoWizard settings={settings} balance={balance} /> : <SubscriberWizard settings={settings} balance={balance} />}
+          {tab === "VIDEO_VIEW" ? <VideoWizard settings={settings} balance={balance} /> : <SubscriberWizard settings={settings} balance={balance} youtube={youtube} />}
         </div>
       </div>
       <div className="space-y-3">
@@ -178,32 +178,54 @@ function VideoWizard({ settings, balance }: { settings: Settings; balance: numbe
   );
 }
 
-function SubscriberWizard({ settings, balance }: { settings: Settings; balance: number }) {
-  const [channelUrl, setChannelUrl] = useState("");
+function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; balance: number; youtube: YT }) {
   const [subs, setSubs] = useState<number>(10);
   const [submitting, setSubmitting] = useState(false);
-  const [preview, setPreview] = useState<{ id: string; title: string; thumbnail: string; handle: string | null } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   // Reward per sub is fixed by admin (settings.subscribeRewardCoins)
   const reward = settings.subscribeRewardCoins;
   const budget = subs * reward;
 
-  async function lookup() {
-    setErr(null); setPreview(null);
-    const r = await fetch("/api/youtube/lookup-channel", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: channelUrl }) });
-    const j = await r.json();
-    if (!r.ok) { setErr(j?.error?.message || "Invalid URL"); return; }
-    setPreview(j.channel);
-  }
+  // The connected channel is auto-selected — no paste needed.
+  // (We trust the verified channel from `youtube` rather than re-fetching.)
+  const preview = youtube
+    ? { id: youtube.id === "" ? "" : (youtube as { id: string }).id, title: youtube.title, thumbnail: youtube.thumbnailUrl ?? "", handle: youtube.handle }
+    : null;
+  // The connected channel id is available in `youtube`; we keep the YouTubeChannel model
+  // ID internally distinct from the youtubeId, so we need to pass youtubeId instead.
+  // To keep the API simple, we use a dedicated preview from a hidden fetch.
+  const [resolved, setResolved] = useState<{ id: string; title: string; thumbnail: string; handle: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!youtube) {
+      setResolved(null);
+      return;
+    }
+    // Fetch the youtubeId (YouTube channel ID) for the connected channel from settings
+    let alive = true;
+    fetch("/api/youtube/lookup-channel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: youtube.handle ? `@${youtube.handle}` : youtube.title }),
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (!alive) return;
+        if (j?.channel) setResolved(j.channel);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [youtube]);
 
   async function submit() {
+    if (!resolved) return;
     setSubmitting(true); setErr(null);
     try {
       const r = await fetch("/api/campaigns/subscriber", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ targetChannelId: preview?.id, targetSubscribers: subs }),
+        body: JSON.stringify({ targetChannelId: resolved.id, targetSubscribers: subs }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -221,28 +243,30 @@ function SubscriberWizard({ settings, balance }: { settings: Settings; balance: 
     }
   }
 
-  const valid = subs >= 1 && subs <= 100000 && budget >= settings.minBudget && budget <= settings.maxBudget && budget <= balance && preview;
+  const valid = subs >= 1 && subs <= 100000 && budget >= settings.minBudget && budget <= settings.maxBudget && budget <= balance && resolved;
 
   return (
     <div className="space-y-4">
+      {/* Connected-channel preview — auto-filled, no paste */}
       <div>
         <label className="text-sm font-medium">Target channel</label>
-        <div className="mt-1 flex gap-2">
-          <input value={channelUrl} onChange={(e) => setChannelUrl(e.target.value)} placeholder="@handle or https://www.youtube.com/channel/UC..." className="input" />
-          <button onClick={lookup} className="btn btn-outline">Lookup</button>
-        </div>
-      </div>
-      {preview && (
-        <div className="card p-3 flex gap-3 items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview.thumbnail} alt="" className="size-12 rounded-full" />
+        <div className="mt-1 card p-3 flex gap-3 items-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200">
+          {resolved?.thumbnail ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={resolved.thumbnail} alt="" className="size-12 rounded-full" />
+          ) : (
+            <div className="size-12 rounded-full bg-[rgb(var(--border))] animate-pulse" />
+          )}
           <div className="min-w-0 flex-1">
-            <div className="font-semibold truncate">{preview.title}</div>
-            <div className="text-xs text-ink-500">{preview.handle ? `@${preview.handle}` : ""}</div>
+            <div className="font-semibold truncate">{resolved?.title || youtube?.title || "Your channel"}</div>
+            <div className="text-xs text-ink-500">{resolved?.handle ? `@${resolved.handle}` : youtube?.handle ? `@${youtube.handle}` : ""}</div>
           </div>
-          <div className="text-[11px] text-emerald-600">✓ verified</div>
+          <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+            <CheckCircle2 size={12} /> Connected
+          </div>
         </div>
-      )}
+        <div className="text-[11px] text-ink-500 mt-1">Auto-filled from your connected YouTube account. No paste needed.</div>
+      </div>
 
       <div>
         <label className="text-sm font-medium">How many subscribers do you want?</label>
@@ -266,7 +290,7 @@ function SubscriberWizard({ settings, balance }: { settings: Settings; balance: 
           <span className="font-extrabold text-base">{formatCoins(budget)} 🪙</span>
         </div>
         <div className="text-[11px] text-ink-500 pt-1 border-t border-[rgb(var(--border))]">
-          Subscribers must verify ownership of a YouTube account. The coin reward is fixed by admin and cannot be changed per campaign.
+          Subscribers must verify ownership of a YouTube account. Subscriptions are re-verified every 5 minutes — if a user unsubscribes, their reward is reversed.
         </div>
       </div>
 

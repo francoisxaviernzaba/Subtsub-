@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         const settings = await getSettings();
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
 
-        // Create PENDING record first
+        // Create PENDING record first with next check scheduled
         const completion = await tx.taskCompletion.create({
           data: {
             userId: u!.user.id,
@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
             targetChannelId: campaign.youtubeChannelId,
             state: "PENDING",
             rewardCoins: reward,
+            // Schedule first re-verification 5 minutes from now
+            nextCheckAt: new Date(Date.now() + 5 * 60 * 1000),
             idempotencyKey: idempotencyKey ?? null,
           },
         });

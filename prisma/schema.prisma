@@ -172,6 +172,13 @@ model TaskCompletion {
   watchSeconds  Int?
   verifiedAt    DateTime?
   revokedAt     DateTime?
+  revokeReason  String?
+  // When the next background re-verification should run (for SUBSCRIBE)
+  nextCheckAt   DateTime?
+  // Counter of background re-verifications done (for SUBSCRIBE)
+  checkCount    Int      @default(0)
+  // True for admin "preview" completions (not counted as real rewards)
+  isAdminPreview Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   idempotencyKey String? @unique
@@ -187,6 +194,7 @@ model TaskCompletion {
   @@index([userId, targetChannelId])
   @@index([campaignId, state])
   @@index([userId, state])
+  @@index([nextCheckAt, state])
 }
 
 // Dedup rules additionally enforced at app level (in atomic tx):
@@ -224,7 +232,7 @@ model CoinTransaction {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  kind      String   // SUBSCRIPTION_VERIFIED | VIEW_REWARD | COIN_PURCHASE | CAMPAIGN_ACTIVATED | CAMPAIGN_COMPLETED | CAMPAIGN_REJECTED | BUDGET_EXHAUSTED | ACCOUNT_EVENT | YT_CONNECTION
+  kind      String   // SUBSCRIPTION_VERIFIED | SUBSCRIPTION_REVOKED | VIEW_REWARD | COIN_PURCHASE | CAMPAIGN_ACTIVATED | CAMPAIGN_COMPLETED | CAMPAIGN_REJECTED | BUDGET_EXHAUSTED | ACCOUNT_EVENT | YT_CONNECTION
   title     String
   body      String?
   link      String?

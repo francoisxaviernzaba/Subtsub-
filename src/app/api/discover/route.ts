@@ -8,6 +8,7 @@ import { rateLimit, getClientKey } from "@/lib/ratelimit";
 const Query = z.object({
   cursor: z.string().optional(),
   take: z.coerce.number().int().min(1).max(50).default(20),
+  type: z.enum(["ALL", "VIDEO_VIEW", "SUBSCRIBER"]).default("ALL"),
 });
 
 export async function GET(req: NextRequest) {
@@ -17,9 +18,10 @@ export async function GET(req: NextRequest) {
     if (!rateLimit(getClientKey(req, user.user.id), 60, 1)) throw new HttpError(429, "RATE_LIMIT", "Too many requests");
 
     const { searchParams } = new URL(req.url);
-    const { cursor, take } = Query.parse({
+    const { cursor, take, type } = Query.parse({
       cursor: searchParams.get("cursor") || undefined,
       take: searchParams.get("take") || undefined,
+      type: searchParams.get("type") || "ALL",
     });
 
     // VIDEO_VIEW campaigns + SUBSCRIBER campaigns: filter eligible + exclude user's own
@@ -41,6 +43,7 @@ export async function GET(req: NextRequest) {
       where: {
         status: "ACTIVE",
         ownerId: { not: user.user.id },
+        ...(type !== "ALL" ? { type } : {}),
         OR: [{ startsAt: null }, { startsAt: { lte: now } }],
         AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
         spentBudget: { lt: prisma.campaign.fields.totalBudget as unknown as any }, // placeholder
@@ -55,6 +58,7 @@ export async function GET(req: NextRequest) {
         where: {
           status: "ACTIVE",
           ownerId: { not: user.user.id },
+          ...(type !== "ALL" ? { type } : {}),
         },
         take: take + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

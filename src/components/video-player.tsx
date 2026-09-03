@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Loader2, Coins, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, Loader2, Coins, AlertTriangle, CheckCircle2, SkipForward } from "lucide-react";
 import { toast } from "./toast";
 
 declare global {
@@ -66,13 +66,24 @@ type Props = {
   campaignId: string;
   onClose: () => void;
   onSuccess: (reward: number, balance: number) => void;
+  onAutoNext?: () => void;
+  hasNext?: boolean;
 };
 
 const HEARTBEAT_INTERVAL_MS = 1000;
 const MAX_IDLE_BEFORE_RESET_MS = 3000; // if no heartbeat for 3s, treat as error
 const MAX_BUFFERING_MS = 15000; // if buffering for 15s, treat as error
 
-export function VideoPlayer({ videoId, title, channelTitle, minWatchSeconds, rewardCoins, campaignId, onClose, onSuccess }: Props) {
+export type VideoPlayerOpenPayload = {
+  campaignId: string;
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  minWatchSeconds: number;
+  rewardCoins: number;
+};
+
+export function VideoPlayer({ videoId, title, channelTitle, minWatchSeconds, rewardCoins, campaignId, onClose, onSuccess, onAutoNext, hasNext }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const apiReadyRef = useRef(false);
@@ -388,9 +399,25 @@ export function VideoPlayer({ videoId, title, channelTitle, minWatchSeconds, rew
           )}
 
           {alreadyClaimedRef.current ? (
-            <div className="btn w-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-              <CheckCircle2 size={14} /> Reward verified · +{rewardCoins} coins
-            </div>
+            <>
+              <div className="btn w-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 size={14} /> Reward verified · +{rewardCoins} coins
+              </div>
+              {hasNext && onAutoNext && (
+                <button
+                  onClick={() => {
+                    isPlayingRef.current = false;
+                    try { playerRef.current?.stopVideo(); } catch { /* ignore */ }
+                    try { playerRef.current?.destroy?.(); } catch { /* ignore */ }
+                    playerRef.current = null;
+                    onAutoNext();
+                  }}
+                  className="btn btn-primary w-full h-12 bg-gradient-to-r from-emerald-500 to-teal-500"
+                >
+                  <SkipForward size={16} /> Auto-play next video
+                </button>
+              )}
+            </>
           ) : (
             <button
               onClick={claim}
