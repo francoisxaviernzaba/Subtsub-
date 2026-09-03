@@ -392,11 +392,11 @@ model SupportReply {
   id        String   @id @default(cuid())
   messageId String
   userId    String
-  message   String
+  content   String
   isAdmin   Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  message   SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  supportMessage SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([messageId, createdAt])

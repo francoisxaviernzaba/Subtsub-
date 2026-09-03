@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "./toast";
 import { MessageSquare, Send, Plus, X } from "lucide-react";
 
-type Reply = { id: string; message: string; isAdmin: boolean; createdAt: string; user: { name: string | null; email: string } };
+type Reply = { id: string; content: string; isAdmin: boolean; createdAt: string; user: { name: string | null; email: string } };
 type SupportItem = { id: string; subject: string; message: string; status: string; priority: string; createdAt: string; updatedAt: string; replies: Reply[] };
 
 export function SupportClient() {
@@ -82,7 +82,7 @@ export function SupportClient() {
                 {m.replies.map((r) => (
                   <div key={r.id} className="text-sm">
                     <div className="text-xs text-ink-500 mb-0.5">{r.user.email} {r.isAdmin && <span className="text-brand-600 font-medium">(support)</span>} · {timeAgo(r.createdAt)}</div>
-                    <div className="text-ink-700 dark:text-ink-300">{r.message}</div>
+                    <div className="text-ink-700 dark:text-ink-300">{r.content}</div>
                   </div>
                 ))}
               </div>

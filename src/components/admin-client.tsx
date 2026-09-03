@@ -20,7 +20,7 @@ type Settings = {
 type User = { id: string; email: string; name: string | null; role: string; status: string; createdAt: string; updatedAt: string; lastSeenAt: string | null; xp: number; level: number; dailyStreak: number; totalEarned: number; bio: string | null; publicProfile: boolean; yt: { title: string; handle: string | null; thumb: string | null; subscriberCount: number | null; verified: boolean } | null };
 type Campaign = { id: string; ownerEmail: string; type: string; status: string; title: string; spent: number; budget: number; completed: number; max: number; createdAt: string };
 type Payment = { id: string; userId: string; coins: number; amountCents: number; status: string; createdAt: string };
-type SupportMessage = { id: string; userId: string; subject: string; message: string; status: string; priority: string; createdAt: string; updatedAt: string; resolvedAt: string | null; user: { id: string; name: string | null; email: string; image: string | null }; replies: { id: string; message: string; isAdmin: boolean; createdAt: string; user: { name: string | null; email: string } }[] };
+type SupportMessage = { id: string; userId: string; subject: string; message: string; status: string; priority: string; createdAt: string; updatedAt: string; resolvedAt: string | null; user: { id: string; name: string | null; email: string; image: string | null }; replies: { id: string; content: string; isAdmin: boolean; createdAt: string; user: { name: string | null; email: string } }[] };
 
 export function AdminClient({ settings, users, campaigns, payments, totalCoins }: { settings: Settings; users: User[]; campaigns: Campaign[]; payments: Payment[]; totalCoins: number }) {
   const [tab, setTab] = useState<"overview" | "settings" | "users" | "campaigns" | "coins" | "support">("overview");
@@ -304,7 +304,7 @@ function SupportManager({ messages, loading, onReply, onStatusChange }: { messag
                 {m.replies.map((r) => (
                   <div key={r.id} className="text-sm">
                     <div className="text-xs text-ink-500 mb-0.5">{r.user.email} {r.isAdmin && <span className="text-brand-600 font-medium">(admin)</span>} · {timeAgo(r.createdAt)}</div>
-                    <div className="text-ink-700 dark:text-ink-300">{r.message}</div>
+                    <div className="text-ink-700 dark:text-ink-300">{r.content}</div>
                   </div>
                 ))}
               </div>

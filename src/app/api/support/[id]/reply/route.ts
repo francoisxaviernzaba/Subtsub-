@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!msg) throw new HttpError(404, "NOT_FOUND", "Message not found");
     if (msg.userId !== u.user.id) throw new HttpError(403, "FORBIDDEN", "Not your message");
     const reply = await prisma.supportReply.create({
-      data: { messageId: params.id, userId: u.user.id, message, isAdmin: false },
+      data: { messageId: params.id, userId: u.user.id, content: message, isAdmin: false },
       include: { user: { select: { name: true, email: true } } },
     });
     await prisma.supportMessage.update({ where: { id: params.id }, data: { updatedAt: new Date() } });

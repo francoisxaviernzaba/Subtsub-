@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const msg = await prisma.supportMessage.findUnique({ where: { id: params.id } });
     if (!msg) throw new HttpError(404, "NOT_FOUND", "Message not found");
     const reply = await prisma.supportReply.create({
-      data: { messageId: params.id, userId: u.user.id, message, isAdmin: true },
+      data: { messageId: params.id, userId: u.user.id, content: message, isAdmin: true },
       include: { user: { select: { name: true, email: true } } },
     });
     await prisma.supportMessage.update({ where: { id: params.id }, data: { status: "IN_PROGRESS", updatedAt: new Date() } });
