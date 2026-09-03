@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, Rocket, Coins } from "lucide-react";
+import { Users, Rocket, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/home", label: "Home", icon: Home },
   { href: "/s2s", label: "S2S", icon: Users },
   { href: "/boost", label: "Boost", icon: Rocket },
   { href: "/coins", label: "Coins", icon: Coins },
@@ -16,7 +15,7 @@ export function BottomNav() {
   const pathname = usePathname() || "";
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-[rgb(var(--border))] bg-[rgb(var(--bg))]/90 backdrop-blur">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-3">
         {items.map((it) => {
           const Icon = it.icon;
           const active = pathname === it.href || pathname.startsWith(it.href + "/");
@@ -42,7 +41,6 @@ export function BottomNav() {
 export function DesktopNav() {
   const pathname = usePathname() || "";
   const links = [
-    { href: "/home", label: "Home" },
     { href: "/s2s", label: "S2S" },
     { href: "/boost", label: "Boost" },
   ];

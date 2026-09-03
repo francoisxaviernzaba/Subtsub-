@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 export default async function Landing() {
   const session = await auth();
-  if (session?.user) redirect("/home");
+  if (session?.user) redirect("/s2s");
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-5 h-14 flex items-center justify-between">

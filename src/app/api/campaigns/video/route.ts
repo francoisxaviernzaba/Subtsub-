@@ -44,6 +44,24 @@ export async function POST(req: NextRequest) {
       throw new HttpError(403, "NOT_OWNER", "This video does not belong to your connected YouTube channel");
     }
 
+    // Anti-cheat: prevent duplicate active/paused campaigns for the same video by the same owner
+    const existing = await prisma.campaign.findFirst({
+      where: {
+        ownerId: u.user.id,
+        type: "VIDEO_VIEW",
+        youtubeVideoId: v.id,
+        status: { in: ["ACTIVE", "PAUSED", "PENDING_REVIEW", "DRAFT"] },
+      },
+      select: { id: true, status: true },
+    });
+    if (existing) {
+      throw new HttpError(
+        409,
+        "DUPLICATE_CAMPAIGN",
+        `You already have a ${existing.status.toLowerCase()} campaign for this video. Cancel it before creating a new one.`
+      );
+    }
+
     const maxActions = body.views;
     const result = await prisma.$transaction(async (tx) => {
       // Debit coins atomically

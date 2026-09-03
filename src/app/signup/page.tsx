@@ -6,7 +6,7 @@ import { adminEmails } from "@/lib/auth";
 
 export default async function SignupPage({ searchParams }: { searchParams: { from?: string; error?: string } }) {
   const session = await auth();
-  if (session?.user) redirect(searchParams.from || "/home");
+  if (session?.user) redirect(searchParams.from || "/s2s");
 
   return (
     <div className="min-h-screen grid place-items-center px-5">
@@ -37,7 +37,7 @@ export default async function SignupPage({ searchParams }: { searchParams: { fro
           <button type="submit" className="btn btn-primary w-full h-12 text-base">Create account</button>
         </form>
         <p className="mt-4 text-sm text-center text-ink-500">
-          Already have an account? <a href={`/login?from=${encodeURIComponent(searchParams.from || "/home")}`} className="text-brand-500 hover:underline">Sign in</a>
+          Already have an account? <a href={`/login?from=${encodeURIComponent(searchParams.from || "/s2s")}`} className="text-brand-500 hover:underline">Sign in</a>
         </p>
       </div>
     </div>
@@ -49,7 +49,7 @@ async function signup(formData: FormData) {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
   const name = (formData.get("name") as string)?.trim();
-  const from = (formData.get("from") as string) || "/home";
+  const from = (formData.get("from") as string) || "/s2s";
   if (!email || !password) {
     redirect(`/signup?from=${encodeURIComponent(from)}&error=${encodeURIComponent("Email and password are required.")}`);
   }

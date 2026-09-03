@@ -292,21 +292,49 @@ export function VideoPlayer({ videoId, title, channelTitle, minWatchSeconds, rew
   }
 
   function close() {
+    isPlayingRef.current = false;
     try { playerRef.current?.stopVideo(); } catch { /* ignore */ }
     try { playerRef.current?.destroy?.(); } catch { /* ignore */ }
     playerRef.current = null;
     onClose();
   }
 
+  // Cleanup on unmount (e.g. parent re-renders, route change)
+  useEffect(() => {
+    return () => {
+      isPlayingRef.current = false;
+      try { playerRef.current?.stopVideo(); } catch { /* ignore */ }
+      try { playerRef.current?.destroy?.(); } catch { /* ignore */ }
+      playerRef.current = null;
+    };
+  }, []);
+
+  // Escape key to close
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-6">
-      <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-3 sm:p-6">
+      <div className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl relative">
         <div className="flex items-center justify-between p-3 sm:p-4 border-b">
           <div className="min-w-0">
             <div className="text-xs text-ink-500 truncate">{channelTitle}</div>
             <div className="font-semibold truncate">{title}</div>
           </div>
-          <button onClick={close} className="btn btn-ghost h-9 w-9 p-0 flex-shrink-0"><X size={18} /></button>
+          <button
+            onClick={close}
+            aria-label="Close video"
+            title="Close (Esc)"
+            className="size-10 grid place-items-center rounded-full hover:bg-rose-50 text-ink-500 hover:text-rose-600 flex-shrink-0 transition"
+          >
+            <X size={22} />
+          </button>
         </div>
 
         <div className="relative bg-black" style={{ aspectRatio: "16/9" }}>
@@ -373,6 +401,9 @@ export function VideoPlayer({ videoId, title, channelTitle, minWatchSeconds, rew
               {canClaim ? `Claim +${rewardCoins} coins` : `Watch ${Math.max(0, minWatchSeconds - Math.floor(watchedSeconds))}s more`}
             </button>
           )}
+          <button onClick={close} className="btn btn-outline w-full h-10 text-sm">
+            <X size={14} /> Close player
+          </button>
           <div className="text-[11px] text-ink-500 text-center">
             Watch time only counts while the video is actually playing. Pausing, seeking, buffering, or leaving the player resets the counter.
           </div>

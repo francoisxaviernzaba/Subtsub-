@@ -10,7 +10,7 @@ export default async function S2SPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">S2S — Subscribe & Watch to Earn</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Discover</h1>
         <p className="text-sm text-ink-500">Watch boosted videos in-app (30s minimum) or subscribe to channels. Verified by YouTube.</p>
       </div>
       <DiscoverGrid />

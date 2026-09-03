@@ -104,7 +104,14 @@ function VideoWizard({ settings, balance }: { settings: Settings; balance: numbe
         body: JSON.stringify({ url, views }),
       });
       const j = await r.json();
-      if (!r.ok) { setErr(j?.error?.message || "Failed"); return; }
+      if (!r.ok) {
+        const msg = j?.error?.message || "Failed";
+        if (j?.error?.code === "DUPLICATE_CAMPAIGN") {
+          toast({ title: "Campaign already exists", description: msg, variant: "error" });
+        }
+        setErr(msg);
+        return;
+      }
       toast({ title: "Campaign created", description: "Your video is now in the discovery feed.", variant: "success" });
       window.location.reload();
     } finally {
@@ -199,7 +206,14 @@ function SubscriberWizard({ settings, balance }: { settings: Settings; balance: 
         body: JSON.stringify({ targetChannelId: preview?.id, targetSubscribers: subs }),
       });
       const j = await r.json();
-      if (!r.ok) { setErr(j?.error?.message || "Failed"); return; }
+      if (!r.ok) {
+        const msg = j?.error?.message || "Failed";
+        if (j?.error?.code === "DUPLICATE_CAMPAIGN") {
+          toast({ title: "Campaign already exists", description: msg, variant: "error" });
+        }
+        setErr(msg);
+        return;
+      }
       toast({ title: "Campaign created", description: "Your S2S campaign is live.", variant: "success" });
       window.location.reload();
     } finally {

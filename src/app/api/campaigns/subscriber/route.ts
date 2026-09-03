@@ -37,6 +37,24 @@ export async function POST(req: NextRequest) {
       throw new HttpError(403, "NOT_OWNER", "Target channel must be your connected YouTube channel");
     }
 
+    // Anti-cheat: prevent duplicate active/paused campaigns for the same channel by the same owner
+    const existing = await prisma.campaign.findFirst({
+      where: {
+        ownerId: u.user.id,
+        type: "SUBSCRIBER",
+        youtubeChannelId: ch.id,
+        status: { in: ["ACTIVE", "PAUSED", "PENDING_REVIEW", "DRAFT"] },
+      },
+      select: { id: true, status: true },
+    });
+    if (existing) {
+      throw new HttpError(
+        409,
+        "DUPLICATE_CAMPAIGN",
+        `You already have a ${existing.status.toLowerCase()} campaign for this channel. Cancel it before creating a new one.`
+      );
+    }
+
     const totalBudget = reward * body.targetSubscribers;
     if (totalBudget > settings.maxBudget) throw new HttpError(400, "OVER_BUDGET", `Total budget exceeds max (${settings.maxBudget})`);
     if (totalBudget < settings.minBudget) throw new HttpError(400, "UNDER_BUDGET", `Total budget below min (${settings.minBudget})`);

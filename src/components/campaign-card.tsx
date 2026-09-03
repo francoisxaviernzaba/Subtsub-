@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Coins, Eye, Users, Loader2, Play, CheckCircle2 } from "lucide-react";
-import { formatNumber, timeAgo } from "@/lib/utils";
+import { Coins, Eye, Users, Loader2, Play, CheckCircle2, Lock } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
 import { VideoPlayer } from "./video-player";
@@ -22,11 +22,12 @@ type Campaign = {
   youtubeVideoId: string | null;
   youtubeChannelId: string | null;
   owner: { name: string | null; image: string | null; youtubeChannel: { thumbnailUrl: string | null; title: string | null; handle: string | null } | null };
+  userState: "AVAILABLE" | "COMPLETED" | "PENDING" | "EXHAUSTED" | "PAUSED";
 };
 
 export function CampaignCard({ campaign }: { campaign: Campaign }) {
   const router = useRouter();
-  const [state, setState] = useState<"idle" | "watching" | "verifying" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "verifying" | "done" | "error">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
 
@@ -38,8 +39,13 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
   const channelTitle = campaign.owner.youtubeChannel?.title || campaign.owner.name || "Creator";
   const channelAvatar = campaign.owner.youtubeChannel?.thumbnailUrl || campaign.owner.image;
 
+  const isClaimable = campaign.userState === "AVAILABLE";
+  const isCompleted = campaign.userState === "COMPLETED";
+  const isPending = campaign.userState === "PENDING";
+  const isBlocked = campaign.userState === "EXHAUSTED" || campaign.userState === "PAUSED";
+
   function startVideo() {
-    if (state !== "idle") return;
+    if (!isClaimable || state !== "idle") return;
     setShowPlayer(true);
   }
 
@@ -54,6 +60,7 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
   }
 
   async function claimSubscribe() {
+    if (!isClaimable || state !== "idle") return;
     setState("verifying");
     setErrMsg(null);
     try {
@@ -123,21 +130,37 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
           </div>
 
           <div className="mt-3">
-            {state === "done" ? (
-              <div className="btn w-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                <CheckCircle2 size={14} /> Reward verified · +{campaign.rewardPerAction}
+            {state === "done" || isCompleted ? (
+              <div className="btn w-full bg-emerald-100 text-emerald-700 border border-emerald-200" title="You already earned this reward">
+                <CheckCircle2 size={14} /> Reward earned · +{campaign.rewardPerAction}
+              </div>
+            ) : isPending ? (
+              <div className="btn w-full bg-amber-50 text-amber-700 border border-amber-200" title="Verification in progress">
+                <Loader2 size={14} className="animate-spin" /> Verification pending
               </div>
             ) : state === "error" ? (
               <div className="space-y-2">
                 <div className="text-xs text-rose-600">{errMsg}</div>
                 <button onClick={isVideo ? startVideo : claimSubscribe} className="btn btn-outline w-full">Try again</button>
               </div>
+            ) : isBlocked ? (
+              <div className="btn w-full bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed" title="This campaign is no longer available">
+                <Lock size={14} /> {campaign.userState === "EXHAUSTED" ? "Budget exhausted" : "Paused"}
+              </div>
             ) : isVideo ? (
-              <button onClick={startVideo} className="btn btn-primary w-full">
+              <button
+                onClick={startVideo}
+                disabled={!isClaimable || state !== "idle"}
+                className="btn btn-primary w-full"
+              >
                 <Play size={14} /> Watch & Earn
               </button>
             ) : state === "idle" ? (
-              <button onClick={claimSubscribe} className="btn btn-primary w-full">
+              <button
+                onClick={claimSubscribe}
+                disabled={!isClaimable}
+                className="btn btn-primary w-full"
+              >
                 <Users size={14} /> Subscribe & Earn
               </button>
             ) : (

@@ -26,14 +26,15 @@ export async function GET(req: NextRequest) {
     // and for subscribers exclude channels the user already completed.
     const completedSubs = await prisma.taskCompletion.findMany({
       where: { userId: user.user.id, state: { in: ["VERIFIED", "PENDING"] }, targetChannelId: { not: null } },
-      select: { targetChannelId: true },
+      select: { targetChannelId: true, state: true },
     });
     const completedChannelIds = new Set(completedSubs.map((c) => c.targetChannelId!).filter(Boolean));
     const completedViewCampaigns = await prisma.taskCompletion.findMany({
       where: { userId: user.user.id, state: { in: ["VERIFIED", "PENDING"] } },
-      select: { campaignId: true },
+      select: { campaignId: true, state: true },
     });
     const completedCampaignIds = new Set(completedViewCampaigns.map((c) => c.campaignId));
+    const completedCampaignState = new Map(completedViewCampaigns.map((c) => [c.campaignId, c.state] as const));
 
     const now = new Date();
     const items = await prisma.campaign.findMany({
@@ -69,7 +70,22 @@ export async function GET(req: NextRequest) {
         if (c.type === "SUBSCRIBER") return c.youtubeChannelId && !completedChannelIds.has(c.youtubeChannelId);
         return !completedCampaignIds.has(c.id);
       })
-      .slice(0, take);
+      .slice(0, take)
+      .map((c) => {
+        // userState tells the UI what state the campaign is in for THIS user
+        let userState: "AVAILABLE" | "COMPLETED" | "PENDING" | "EXHAUSTED" | "PAUSED" = "AVAILABLE";
+        if (c.status !== "ACTIVE") {
+          userState = c.status === "PAUSED" ? "PAUSED" : "EXHAUSTED";
+        } else if (c.spentBudget >= c.totalBudget) {
+          userState = "EXHAUSTED";
+        } else if (c.type === "SUBSCRIBER" && c.youtubeChannelId && completedChannelIds.has(c.youtubeChannelId)) {
+          const comp = completedSubs.find((x) => x.targetChannelId === c.youtubeChannelId);
+          userState = comp?.state === "PENDING" ? "PENDING" : "COMPLETED";
+        } else if (completedCampaignIds.has(c.id)) {
+          userState = completedCampaignState.get(c.id) === "PENDING" ? "PENDING" : "COMPLETED";
+        }
+        return { ...c, userState };
+      });
 
     const nextCursor = items.length > take ? items[take].id : null;
     return NextResponse.json({ items: filtered, nextCursor });

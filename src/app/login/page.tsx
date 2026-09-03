@@ -4,7 +4,7 @@ import { signIn } from "@/lib/auth";
 
 export default async function LoginPage({ searchParams }: { searchParams: { from?: string; error?: string } }) {
   const session = await auth();
-  if (session?.user) redirect(searchParams.from || "/home");
+  if (session?.user) redirect(searchParams.from || "/s2s");
 
   return (
     <div className="min-h-screen grid place-items-center px-5">
@@ -26,7 +26,7 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
               redirect: true,
               email: formData.get("email"),
               password: formData.get("password"),
-              redirectTo: searchParams.from || "/home",
+              redirectTo: searchParams.from || "/s2s",
             });
           }}
           className="mt-6 space-y-3 text-left"
@@ -51,7 +51,7 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
         <form
           action={async () => {
             "use server";
-            await signIn("google", { redirectTo: searchParams.from || "/home" });
+            await signIn("google", { redirectTo: searchParams.from || "/s2s" });
           }}
         >
           <button type="submit" className="btn btn-secondary w-full h-12 text-base">
@@ -60,7 +60,7 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
         </form>
 
         <p className="mt-6 text-sm text-center text-ink-500">
-          No account? <a href={`/signup?from=${encodeURIComponent(searchParams.from || "/home")}`} className="text-brand-500 hover:underline">Create one</a>
+          No account? <a href={`/signup?from=${encodeURIComponent(searchParams.from || "/s2s")}`} className="text-brand-500 hover:underline">Create one</a>
         </p>
       </div>
     </div>

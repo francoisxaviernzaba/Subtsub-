@@ -19,6 +19,7 @@ type Campaign = {
   youtubeVideoId: string | null;
   youtubeChannelId: string | null;
   owner: { name: string | null; image: string | null; youtubeChannel: { thumbnailUrl: string | null; title: string | null; handle: string | null } | null };
+  userState: "AVAILABLE" | "COMPLETED" | "PENDING" | "EXHAUSTED" | "PAUSED";
 };
 
 export function DiscoverGrid() {

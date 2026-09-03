@@ -27,14 +27,14 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md border-b border-[rgb(var(--border))] bg-[rgb(var(--bg))]/80">
       <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-14">
-        <Link href="/home" className="flex items-center gap-2 font-extrabold tracking-tight">
+        <Link href="/s2s" className="flex items-center gap-2 font-extrabold tracking-tight">
           <div className="size-8 rounded-xl bg-gradient-to-br from-brand-500 to-pink-500 grid place-items-center text-white text-sm shadow-glow">S2S</div>
           <span className="hidden sm:inline">SUB2SUB</span>
         </Link>
 
         <div className="flex-1 max-w-xl mx-auto">
           <Link
-            href="/home"
+            href="/s2s"
             className="hidden md:flex items-center gap-2 px-3 h-9 rounded-full bg-[rgb(var(--border))]/40 text-sm text-ink-500 hover:bg-[rgb(var(--border))]/70"
           >
             <Search size={16} /> Discover videos & channels
