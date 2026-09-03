@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         // require YT connection
         const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
         if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first");
-        if (!myChannel.accessTokenCipher) throw new HttpError(400, "NO_SCOPE", "Reconnect YouTube to grant subscription permissions");
+        if (!myChannel.accessTokenCipher) throw new HttpError(400, "NO_SCOPE", "Subscribe tasks require Google OAuth. Connect via OAuth at /settings#youtube (Google sign-in) to enable subscription verification.");
 
         // Atomic: reserve budget + create PENDING completion
         const settings = await getSettings();

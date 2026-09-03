@@ -121,6 +121,27 @@ function SecurityPanel() {
 }
 
 function YouTubePanel({ youtube, status, message }: { youtube: YT; status?: string; message?: string }) {
+  const [manualInput, setManualInput] = useState("");
+  const [manualBusy, setManualBusy] = useState(false);
+
+  async function manualConnect() {
+    if (!manualInput.trim()) return;
+    setManualBusy(true);
+    const r = await fetch("/api/youtube/connect-manual", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ channel: manualInput }),
+    });
+    setManualBusy(false);
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      toast({ title: "Connect failed", description: j?.error?.message, variant: "error" });
+      return;
+    }
+    toast({ title: "Channel connected", variant: "success" });
+    window.location.reload();
+  }
+
   return (
     <div className="card p-5 space-y-4">
       {status === "ok" && <div className="p-3 rounded-lg bg-emerald-50 text-emerald-700 text-sm flex items-center gap-2"><CheckCircle2 size={16} /> YouTube channel connected.</div>}
@@ -156,9 +177,31 @@ function YouTubePanel({ youtube, status, message }: { youtube: YT; status?: stri
         </div>
       </div>
 
-      <a href="/api/youtube/connect" className="btn btn-primary w-full">
-        <Youtube size={16} /> {youtube ? "Reconnect" : "Connect YouTube channel"}
-      </a>
+      {!youtube && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm font-medium">Connect via channel link or handle</label>
+            <input
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              placeholder="@yourchannel or https://youtube.com/@yourchannel or UCxxxxx"
+              className="input mt-1"
+            />
+            <div className="text-xs text-ink-500 mt-1">No Google OAuth needed. Enter your channel handle, full URL, or channel ID.</div>
+          </div>
+          <button onClick={manualConnect} disabled={manualBusy || !manualInput.trim()} className="btn btn-primary w-full h-10">
+            {manualBusy ? "Connecting..." : "Connect channel"}
+          </button>
+        </div>
+      )}
+
+      <div className="text-xs text-ink-500">
+        <a href="/api/youtube/connect" className="text-brand-500 hover:underline">Use Google OAuth instead</a>
+        {youtube && (
+          <span className="mx-1">·</span>
+        )}
+        {youtube && <a href="/api/youtube/connect" className="text-brand-500 hover:underline">Reconnect via OAuth</a>}
+      </div>
     </div>
   );
 }
