@@ -1,12 +1,10 @@
 /**
  * Payment provider abstraction. Implementations:
  *   - mock: instantly credits coins (for sandbox / dev)
- *   - shkeeper: real crypto payments via SHKeeper (open-source)
+ *   - gumroad: real payments via Gumroad (no business docs required)
  *   - stripe: real Stripe checkout
  * Add more providers by implementing this interface.
  */
-
-import crypto from "node:crypto";
 
 export type CreatePaymentInput = {
   userId: string;
@@ -23,8 +21,6 @@ export type CreatePaymentResult = {
   provider: string;
   providerRef: string;
   checkoutUrl?: string;
-  checkoutAddress?: string;
-  checkoutAmount?: string;
   status: "PENDING" | "SUCCEEDED" | "FAILED";
   mock?: boolean;
 };
@@ -57,80 +53,41 @@ class MockProvider implements PaymentProvider {
   }
 }
 
-class ShkeeperProvider implements PaymentProvider {
-  name = "shkeeper";
-  private apiKey: string;
-  private baseUrl: string;
-  private crypto: string;
+class GumroadProvider implements PaymentProvider {
+  name = "gumroad";
+  private productMap: Record<number, string>;
 
   constructor() {
-    this.apiKey = process.env.SHKEEPER_API_KEY || "";
-    this.baseUrl = (process.env.SHKEEPER_BASE_URL || "https://demo.shkeeper.io").replace(/\/$/, "");
-    this.crypto = process.env.SHKEEPER_CRYPTO || "BTC";
-  }
-
-  private async request(path: string, init: RequestInit): Promise<any> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shkeeper-Api-Key": this.apiKey,
-        ...(init.headers || {}),
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`SHKeeper API error ${res.status}: ${text}`);
-    }
-    const json = await res.json();
-    if (json.status === "error") {
-      throw new Error(json.message || "SHKeeper request failed");
-    }
-    return json;
+    this.productMap = {
+      500: process.env.GUMROAD_PRODUCT_500 || "",
+      1500: process.env.GUMROAD_PRODUCT_1500 || "",
+      5000: process.env.GUMROAD_PRODUCT_5000 || "",
+      12000: process.env.GUMROAD_PRODUCT_12000 || "",
+    };
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
-    if (!this.apiKey) throw new Error("SHKeeper credentials are not configured");
-
-    const externalId = input.metadata?.paymentId || `sub2sub_${input.userId}_${Date.now()}`;
-    const amount = (input.amountCents / 100).toFixed(2);
-    const callbackUrl = `${process.env.NEXTAUTH_URL}/api/payments/shkeeper/webhook`;
-
-    const body = {
-      external_id: externalId,
-      fiat: input.currency,
-      amount,
-      callback_url: callbackUrl,
-    };
-
-    const result = await this.request(`/api/v1/${encodeURIComponent(this.crypto)}/payment_request`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-
+    const productId = this.productMap[input.coins];
+    if (!productId) {
+      throw new Error(`No Gumroad product configured for ${input.coins} coins`);
+    }
+    const paymentId = input.metadata?.paymentId || `gumroad_${input.userId}_${Date.now()}`;
+    const params = new URLSearchParams();
+    params.set("email", input.metadata?.email || "");
+    params.set("user_id", input.metadata?.userId || input.userId);
+    params.set("payment_id", paymentId);
+    const checkoutUrl = `https://gum.co/${productId}?${params.toString()}`;
     return {
-      paymentId: externalId,
-      provider: "shkeeper",
-      providerRef: externalId,
-      checkoutUrl: result.wallet,
-      checkoutAddress: result.wallet,
-      checkoutAmount: result.amount,
+      paymentId,
+      provider: "gumroad",
+      providerRef: paymentId,
+      checkoutUrl,
       status: "PENDING",
     };
   }
 
-  async verifyPayment(providerRef: string): Promise<VerifyPaymentResult> {
-    if (!this.apiKey) return { status: "PENDING" };
-    try {
-      const result = await this.request(`/api/v1/invoices/${encodeURIComponent(providerRef)}`, { method: "GET" });
-      const invoices = result.invoices || [];
-      const invoice = invoices[0];
-      if (!invoice) return { status: "PENDING" };
-      const status = invoice.status === "PAID" || invoice.status === "OVERPAID" ? "SUCCEEDED" : invoice.status === "FAILED" || invoice.status === "CANCELED" ? "FAILED" : "PENDING";
-      return { status, providerRef };
-    } catch {
-      return { status: "PENDING" };
-    }
+  async verifyPayment(_providerRef: string): Promise<VerifyPaymentResult> {
+    return { status: "PENDING" };
   }
 }
 
@@ -146,7 +103,7 @@ class StripeProvider implements PaymentProvider {
 
 export function getPaymentProvider(): PaymentProvider {
   const name = (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
-  if (name === "shkeeper") return new ShkeeperProvider();
+  if (name === "gumroad") return new GumroadProvider();
   if (name === "stripe") return new StripeProvider();
   return new MockProvider();
 }

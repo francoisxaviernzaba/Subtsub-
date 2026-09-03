@@ -11,6 +11,7 @@ const Body = z.object({
   coins: z.number().int().min(1).max(10_000_000),
   amountCents: z.number().int().min(1).max(1_000_000_00),
   currency: z.string().min(3).max(8).default("USD"),
+  email: z.string().email().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
       currency,
       successUrl: `${origin}/coins?status=success`,
       cancelUrl: `${origin}/coins?status=cancelled`,
-      metadata: { paymentId: p.id },
+      metadata: { paymentId: p.id, email: body.email || u.user.email || "", userId: u.user.id },
     });
 
     // Update payment with provider ref
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, mock: true, ...result });
     }
 
-    return NextResponse.json({ ok: true, paymentId: p.id, provider: provider.name, checkoutUrl: intent.checkoutUrl, checkoutAddress: intent.checkoutAddress, checkoutAmount: intent.checkoutAmount, providerRef: intent.providerRef });
+    return NextResponse.json({ ok: true, paymentId: p.id, provider: provider.name, checkoutUrl: intent.checkoutUrl, providerRef: intent.providerRef });
   } catch (e) {
     return handleError(e);
   }

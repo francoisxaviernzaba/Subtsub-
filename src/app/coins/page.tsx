@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function CoinsPage() {
   const u = await auth();
   if (!u?.user?.id) return null;
+  const user = await prisma.user.findUnique({ where: { id: u.user.id }, select: { email: true } });
   const balance = await prisma.coinTransaction.aggregate({ where: { userId: u.user.id }, _sum: { deltaCoins: true } });
   const settings = await getSettings();
   const recent = await prisma.payment.findMany({ where: { userId: u.user.id }, orderBy: { createdAt: "desc" }, take: 10 });
@@ -18,6 +19,7 @@ export default async function CoinsPage() {
         <p className="text-sm text-ink-500">Buy coins to boost your content. Coins are virtual credits used inside SUB2SUB.</p>
       </div>
       <CoinsClient
+        userEmail={user?.email || ""}
         balance={balance._sum.deltaCoins ?? 0}
         packages={settings.coinPackages}
         recentPayments={recent.map((p) => ({
