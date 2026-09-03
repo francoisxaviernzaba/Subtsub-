@@ -49,6 +49,48 @@ const posts = [
     date: "2026-09-03",
     readTime: "6 min read",
   },
+  {
+    slug: "sub2sub-vs-sub4sub",
+    title: "SUB2SUB vs Sub4Sub: Which is Better?",
+    excerpt: "Compare SUB2SUB and traditional sub4sub methods to find the best YouTube growth strategy for you.",
+    date: "2026-09-03",
+    readTime: "5 min read",
+  },
+  {
+    slug: "youtube-watch-time-tips",
+    title: "How to Increase YouTube Watch Time",
+    excerpt: "Watch time is crucial for YouTube success. Learn proven strategies to increase your watch time and boost your channel.",
+    date: "2026-09-03",
+    readTime: "6 min read",
+  },
+  {
+    slug: "free-youtube-promotion",
+    title: "Free YouTube Promotion: 10 Effective Strategies",
+    excerpt: "Promote your YouTube channel for free with these proven strategies. No budget required.",
+    date: "2026-09-03",
+    readTime: "7 min read",
+  },
+  {
+    slug: "youtube-channel-growth",
+    title: "YouTube Channel Growth: A Comprehensive Guide",
+    excerpt: "Everything you need to know about growing your YouTube channel from zero to monetization.",
+    date: "2026-09-03",
+    readTime: "10 min read",
+  },
+  {
+    slug: "how-to-monetize-youtube-fast",
+    title: "How to Monetize YouTube Channel Fast",
+    excerpt: "Learn the fastest ways to monetize your YouTube channel and start earning from your content.",
+    date: "2026-09-03",
+    readTime: "6 min read",
+  },
+  {
+    slug: "youtube-seo-guide",
+    title: "YouTube SEO: The Ultimate Guide",
+    excerpt: "Master YouTube SEO to rank higher in search results and get more organic views.",
+    date: "2026-09-03",
+    readTime: "8 min read",
+  },
 ];
 
 export default function BlogPage() {

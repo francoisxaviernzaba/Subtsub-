@@ -8,7 +8,7 @@ const posts: Record<string, { title: string; content: React.ReactNode }> = {
       <div className="space-y-4">
         <p>SUB2SUB is a revolutionary platform that helps YouTube creators grow their channels through community-powered engagement. Unlike traditional sub4sub methods, SUB2SUB uses real YouTube API verification to ensure genuine interactions.</p>
         <h2 className="text-xl font-bold mt-6">The Basics</h2>
-        <p>Creators earn coins by watching boosted videos and subscribing to boosted channels. These coins can then be spent to boost their own content. It's a win-win system that benefits everyone in the community.</p>
+        <p>Creators earn coins by watching boosted videos and subscribing to boosted channels. These coins can then be spent to boost their own content. It&apos;s a win-win system that benefits everyone in the community.</p>
         <h2 className="text-xl font-bold mt-6">How to Get Started</h2>
         <p>1. Sign up with your Google account<br />2. Connect your YouTube channel<br />3. Start completing tasks to earn coins<br />4. Create your first boost campaign<br />5. Watch your channel grow</p>
         <h2 className="text-xl font-bold mt-6">Why Choose SUB2SUB?</h2>
@@ -89,6 +89,112 @@ const posts: Record<string, { title: string; content: React.ReactNode }> = {
         <p>Create thumbnails that stand out. Use bright colors, clear text, and expressive faces. A great thumbnail can significantly increase your CTR.</p>
         <h2 className="text-xl font-bold mt-6">Playlists</h2>
         <p>Organize your content into playlists. This increases watch time by automatically playing the next video.</p>
+      </div>
+    ),
+  },
+  "sub2sub-vs-sub4sub": {
+    title: "SUB2SUB vs Sub4Sub: Which is Better?",
+    content: (
+      <div className="space-y-4">
+        <p>SUB2SUB and traditional sub4sub are very different approaches to YouTube growth. Here&apos;s a detailed comparison.</p>
+        <h2 className="text-xl font-bold mt-6">Verification</h2>
+        <p>SUB2SUB uses the YouTube Data API v3 to verify all subscriptions. Traditional sub4sub has no verification - you just hope people actually subscribed.</p>
+        <h2 className="text-xl font-bold mt-6">Quality</h2>
+        <p>With SUB2SUB, you get real engagement from active community members. Sub4sub often results in inactive subscribers who don&apos;t engage with your content.</p>
+        <h2 className="text-xl font-bold mt-6">Safety</h2>
+        <p>SUB2SUB is much safer for your channel. We never ask for your password and use OAuth for read-only access. Traditional sub4sub can sometimes lead to account issues.</p>
+        <h2 className="text-xl font-bold mt-6">Conclusion</h2>
+        <p>SUB2SUB is the clear winner for safe, effective YouTube growth. Our coin-based economy ensures quality interactions while protecting your channel.</p>
+      </div>
+    ),
+  },
+  "youtube-watch-time-tips": {
+    title: "How to Increase YouTube Watch Time",
+    content: (
+      <div className="space-y-4">
+        <p>Watch time is one of the most important metrics for YouTube success. Here&apos;s how to increase it.</p>
+        <h2 className="text-xl font-bold mt-6">Create Longer Content</h2>
+        <p>Videos over 10 minutes tend to perform better. They give you more ad space and increase overall watch time.</p>
+        <h2 className="text-xl font-bold mt-6">Use Playlists</h2>
+        <p>Organize your videos into playlists. This encourages binge-watching and increases total watch time.</p>
+        <h2 className="text-xl font-bold mt-6">Add End Screens</h2>
+        <p>Use end screens to promote other videos. This keeps viewers on your channel longer.</p>
+        <h2 className="text-xl font-bold mt-6">Create Series</h2>
+        <p>Multi-part series encourage viewers to watch multiple videos in sequence, boosting your watch time significantly.</p>
+      </div>
+    ),
+  },
+  "free-youtube-promotion": {
+    title: "Free YouTube Promotion: 10 Effective Strategies",
+    content: (
+      <div className="space-y-4">
+        <p>You don&apos;t need a big budget to promote your YouTube channel. Here are 10 free strategies.</p>
+        <h2 className="text-xl font-bold mt-6">1. Optimize Your Titles</h2>
+        <p>Use keywords people are searching for. Make your titles compelling and clickable.</p>
+        <h2 className="text-xl font-bold mt-6">2. Create Great Thumbnails</h2>
+        <p>Invest time in custom thumbnails that stand out in search results.</p>
+        <h2 className="text-xl font-bold mt-6">3. Engage with Comments</h2>
+        <p>Reply to every comment. This builds community and increases engagement metrics.</p>
+        <h2 className="text-xl font-bold mt-6">4. Use Social Media</h2>
+        <p>Share your videos on Twitter, Instagram, Facebook, and Reddit.</p>
+        <h2 className="text-xl font-bold mt-6">5. Collaborate</h2>
+        <p>Partner with other creators for cross-promotion.</p>
+        <h2 className="text-xl font-bold mt-6">6. Use SUB2SUB</h2>
+        <p>Join SUB2SUB to earn coins and boost your videos to real viewers. It&apos;s free to start.</p>
+      </div>
+    ),
+  },
+  "youtube-channel-growth": {
+    title: "YouTube Channel Growth: A Comprehensive Guide",
+    content: (
+      <div className="space-y-4">
+        <p>Growing a YouTube channel requires strategy, consistency, and patience. This guide covers everything you need to know.</p>
+        <h2 className="text-xl font-bold mt-6">Define Your Niche</h2>
+        <p>Choose a specific niche and stick to it. This helps YouTube understand your audience and recommend your videos.</p>
+        <h2 className="text-xl font-bold mt-6">Content Strategy</h2>
+        <p>Plan your content calendar. Batch record when possible. Maintain consistent quality.</p>
+        <h2 className="text-xl font-bold mt-6">SEO Optimization</h2>
+        <p>Research keywords, optimize titles and descriptions, use tags effectively.</p>
+        <h2 className="text-xl font-bold mt-6">Community Building</h2>
+        <p>Engage with your audience. Respond to comments. Ask for feedback. Build a loyal community.</p>
+        <h2 className="text-xl font-bold mt-6">Analytics</h2>
+        <p>Study your YouTube Analytics. Understand what works and double down on it.</p>
+      </div>
+    ),
+  },
+  "how-to-monetize-youtube-fast": {
+    title: "How to Monetize YouTube Channel Fast",
+    content: (
+      <div className="space-y-4">
+        <p>Want to monetize your YouTube channel quickly? Here are the fastest paths to earning.</p>
+        <h2 className="text-xl font-bold mt-6">Join the YouTube Partner Program</h2>
+        <p>Reach 1000 subscribers and 4000 watch hours. Enable monetization in your settings.</p>
+        <h2 className="text-xl font-bold mt-6">Use Channel Memberships</h2>
+        <p>Once eligible, offer channel memberships with exclusive perks.</p>
+        <h2 className="text-xl font-bold mt-6">Enable Super Chat</h2>
+        <p>Super Chat lets viewers pay to highlight their messages during live streams.</p>
+        <h2 className="text-xl font-bold mt-6">Affiliate Marketing</h2>
+        <p>Promote products relevant to your niche and earn commissions on sales.</p>
+        <h2 className="text-xl font-bold mt-6">Brand Deals</h2>
+        <p>Once you have an audience, brands will pay for sponsorships and product placements.</p>
+      </div>
+    ),
+  },
+  "youtube-seo-guide": {
+    title: "YouTube SEO: The Ultimate Guide",
+    content: (
+      <div className="space-y-4">
+        <p>YouTube SEO is essential for getting discovered. This guide covers everything you need to know.</p>
+        <h2 className="text-xl font-bold mt-6">Keyword Research</h2>
+        <p>Use tools like TubeBuddy, VidIQ, or Google Keyword Planner to find high-potential keywords.</p>
+        <h2 className="text-xl font-bold mt-6">Title Optimization</h2>
+        <p>Include your main keyword near the beginning. Keep titles under 60 characters. Make them compelling.</p>
+        <h2 className="text-xl font-bold mt-6">Description Optimization</h2>
+        <p>Write detailed descriptions with your keywords naturally included. Add timestamps for longer videos.</p>
+        <h2 className="text-xl font-bold mt-6">Tags</h2>
+        <p>Use a mix of broad and specific tags. Include misspellings and variations.</p>
+        <h2 className="text-xl font-bold mt-6">Thumbnails</h2>
+        <p>Create custom thumbnails with text overlay. Use contrasting colors and faces when possible.</p>
       </div>
     ),
   },
