@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "./toast";
 import { formatCoins, timeAgo } from "@/lib/utils";
+import { formatHandle } from "@/lib/format-handle";
 import { Coins, Users, Rocket, ShoppingCart, Settings as Cog } from "lucide-react";
 
 type Settings = {
@@ -122,7 +123,7 @@ function UsersTable({ users }: { users: User[] }) {
             <div className="text-sm font-semibold truncate">{u.name || u.email}</div>
             <div className="text-xs text-ink-500 truncate">{u.email} · {u.role} · {u.status} · {timeAgo(u.createdAt)}</div>
           </div>
-          <div className="text-xs text-ink-500">{u.yt ? `@${u.yt.handle || u.yt.title}` : "—"}</div>
+          <div className="text-xs text-ink-500">{u.yt ? (formatHandle(u.yt.handle) || u.yt.title) : "—"}</div>
         </div>
       ))}
     </div>

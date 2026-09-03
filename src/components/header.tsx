@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift, Flame, Trophy } from "lucide-react";
 import { formatCoins } from "@/lib/utils";
+import { formatHandle } from "@/lib/format-handle";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationsPopover } from "./notifications-popover";
 import { LevelBadge } from "./level-badge";
@@ -120,7 +121,7 @@ export function Header({ user, balance, youtube, xp, dailyStreak }: { user: User
                       )}
                       <div className="min-w-0">
                         <div className="font-medium truncate">{youtube.title}</div>
-                        {youtube.handle && <div className="text-ink-500">@{youtube.handle}</div>}
+                        {formatHandle(youtube.handle) && <div className="text-ink-500">{formatHandle(youtube.handle)}</div>}
                       </div>
                     </div>
                   ) : (

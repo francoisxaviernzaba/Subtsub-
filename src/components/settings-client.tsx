@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Youtube, AlertTriangle, CheckCircle2, Lock, Bell, User as UserIcon, ExternalLink } from "lucide-react";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
+import { formatHandle } from "@/lib/format-handle";
 
 type User = { name: string; email: string; username: string };
 type YT = { title: string; handle: string | null; thumbnailUrl: string | null; verified: boolean; connectedAt: string } | null;
@@ -136,7 +137,7 @@ function YouTubePanel({ youtube, status, message }: { youtube: YT; status?: stri
           </div>
           <div>
             <div className="font-semibold">{youtube.title}</div>
-            {youtube.handle && <div className="text-sm text-ink-500">@{youtube.handle}</div>}
+            {formatHandle(youtube.handle) && <div className="text-sm text-ink-500">{formatHandle(youtube.handle)}</div>}
             <div className="text-[11px] text-ink-500">Connected {new Date(youtube.connectedAt).toLocaleDateString()}</div>
           </div>
           <a href={`https://www.youtube.com/channel/${youtube.handle || ""}`} target="_blank" rel="noopener noreferrer" className="ml-auto btn btn-outline"><ExternalLink size={14} /> View</a>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "./toast";
 import { formatCoins, formatNumber, timeAgo } from "@/lib/utils";
+import { formatHandle } from "@/lib/format-handle";
 
 type YT = { id: string; title: string; handle: string | null; thumbnailUrl: string | null } | null;
 type Campaign = {
@@ -314,7 +315,7 @@ function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; 
           )}
           <div className="min-w-0 flex-1">
             <div className="font-semibold truncate">{resolved?.title || youtube?.title || "Your channel"}</div>
-            <div className="text-xs text-ink-500">{resolved?.handle ? `@${resolved.handle}` : youtube?.handle ? `@${youtube.handle}` : ""}</div>
+            <div className="text-xs text-ink-500">{formatHandle(resolved?.handle || youtube?.handle) || ""}</div>
           </div>
           <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
             <CheckCircle2 size={12} /> Connected

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { Coins, TrendingUp, TrendingDown, ShoppingCart, Users, Eye, CheckCircle2, Rocket } from "lucide-react";
 import Link from "next/link";
 import { InviteSection } from "@/components/invite-section";
+import { formatHandle } from "@/lib/format-handle";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function ProfilePage() {
             <div className="mt-2 inline-flex items-center gap-2 chip">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {yt.thumbnailUrl && <img src={yt.thumbnailUrl} alt="" className="size-4 rounded-full" />}
-              Connected: {yt.title} {yt.handle && `@${yt.handle}`}
+              Connected: {yt.title} {formatHandle(yt.handle) && <span className="text-ink-500">{formatHandle(yt.handle)}</span>}
             </div>
           )}
         </div>

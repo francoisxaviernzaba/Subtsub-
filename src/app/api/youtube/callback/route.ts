@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
 
     const ytChannelId = item.id;
     const ytTitle = item.snippet?.title || "YouTube channel";
-    const ytHandle = item.snippet?.customUrl || null;
+    const rawHandle = item.snippet?.customUrl || null;
+    const ytHandle = rawHandle ? rawHandle.replace(/^@/, "").replace(/^@/, "") : null;
     const ytThumb = item.snippet?.thumbnails?.default?.url || null;
 
     // Get subscriber count

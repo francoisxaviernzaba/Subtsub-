@@ -1,8 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/db";
-import { adminEmails } from "@/lib/auth";
+import { signIn } from "@/lib/auth";
 
 export default async function SignupPage({ searchParams }: { searchParams: { from?: string; error?: string; ref?: string } }) {
   const session = await auth();
@@ -10,10 +8,10 @@ export default async function SignupPage({ searchParams }: { searchParams: { fro
 
   return (
     <div className="min-h-screen grid place-items-center px-5">
-      <div className="card p-8 max-w-md w-full">
+      <div className="card p-8 max-w-md w-full text-center">
         <div className="mx-auto size-12 rounded-2xl bg-gradient-to-br from-brand-500 to-rose-500 grid place-items-center text-white font-extrabold shadow-glow">S2S</div>
-        <h1 className="mt-4 text-2xl font-bold text-center">Create account</h1>
-        <p className="mt-2 text-ink-500 text-sm text-center">Sign up with email and password.</p>
+        <h1 className="mt-4 text-2xl font-bold">Create account</h1>
+        <p className="mt-2 text-ink-500 text-sm">Sign up with Google to get started.</p>
 
         {searchParams.error && (
           <div className="mt-4 p-3 rounded-lg bg-rose-100 text-rose-700 text-sm">
@@ -21,61 +19,32 @@ export default async function SignupPage({ searchParams }: { searchParams: { fro
           </div>
         )}
 
-        <form action={signup} className="mt-6 space-y-4">
-          {searchParams.ref && <input type="hidden" name="ref" value={searchParams.ref} />}
-          <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
-            <input name="name" type="text" className="input w-full" placeholder="Your name" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input name="email" type="email" required className="input w-full" placeholder="you@example.com" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input name="password" type="password" required minLength={6} className="input w-full" placeholder="Minimum 6 characters" />
-          </div>
-          <button type="submit" className="btn btn-primary w-full h-12 text-base">Create account</button>
+        <form
+          action={async () => {
+            "use server";
+            await signIn("google", { redirectTo: searchParams.from || "/s2s" });
+          }}
+        >
+          <button type="submit" className="btn btn-primary w-full h-12 text-base mt-6">
+            <GoogleG className="mr-1" /> Continue with Google
+          </button>
         </form>
-        <p className="mt-4 text-sm text-center text-ink-500">
-          Already have an account? <a href={`/login?from=${encodeURIComponent(searchParams.from || "/s2s")}`} className="text-brand-500 hover:underline">Sign in</a>
+
+        <p className="mt-6 text-sm text-center text-ink-500">
+          By signing up, you agree to our <a href="/terms" className="text-brand-500 hover:underline">Terms</a> and <a href="/privacy" className="text-brand-500 hover:underline">Privacy Policy</a>.
         </p>
       </div>
     </div>
   );
 }
 
-async function signup(formData: FormData) {
-  "use server";
-  const email = (formData.get("email") as string)?.trim().toLowerCase();
-  const password = formData.get("password") as string;
-  const name = (formData.get("name") as string)?.trim();
-  const ref = (formData.get("ref") as string)?.trim();
-  const from = (formData.get("from") as string) || "/s2s";
-  if (!email || !password) {
-    redirect(`/signup?from=${encodeURIComponent(from)}&error=${encodeURIComponent("Email and password are required.")}`);
-  }
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    redirect(`/signup?from=${encodeURIComponent(from)}&error=${encodeURIComponent("An account with this email already exists.")}`);
-  }
-  const passwordHash = await bcrypt.hash(password, 10);
-  const role = adminEmails.includes(email) ? "ADMIN" : "USER";
-
-  let invitedById: string | undefined;
-  if (ref) {
-    const inviter = await prisma.user.findFirst({ where: { inviteCode: ref } });
-    if (inviter) invitedById = inviter.id;
-  }
-
-  await prisma.user.create({
-    data: {
-      email,
-      name: name || email.split("@")[0],
-      passwordHash,
-      role,
-      invitedById,
-    },
-  });
-  redirect(`/login?from=${encodeURIComponent(from)}`);
+function GoogleG({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.32A9 9 0 0 0 9 18z"/>
+      <path fill="#FBBC05" d="M3.98 10.7A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.3-1.7V4.98H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.02l3.02-2.32z"/>
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.34l2.58-2.58A9 9 0 0 0 9 0 9 9 0 0 0 .96 4.98l3.02 2.32C4.68 5.16 6.66 3.58 9 3.58z"/>
+    </svg>
+  );
 }
