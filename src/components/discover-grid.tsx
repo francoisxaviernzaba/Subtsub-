@@ -44,6 +44,7 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
   const [videosDone, setVideosDone] = useState(false);
   const [subsDone, setSubsDone] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const videoSentinel = useRef<HTMLDivElement>(null);
   const subSentinel = useRef<HTMLDivElement>(null);
 
@@ -55,7 +56,7 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
     params.set("take", "20");
     params.set("type", type);
     const r = await fetch(`/api/discover?${params.toString()}`);
-    if (!r.ok) { setLoading(false); return; }
+    if (!r.ok) { setLoading(false); setInitialLoad(false); return; }
     const j = await r.json();
     if (type === "VIDEO_VIEW") {
       setVideos((prev) => reset ? (j.items as Campaign[]) : [...prev, ...(j.items as Campaign[])]);
@@ -67,6 +68,7 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
       if (!j.nextCursor) setSubsDone(true);
     }
     setLoading(false);
+    setInitialLoad(false);
   }, [loading]);
 
   useEffect(() => {
@@ -79,22 +81,22 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
     const el = videoSentinel.current;
     if (!el) return;
     const io = new IntersectionObserver((entries) => {
-      for (const e of entries) if (e.isIntersecting) fetchPage("VIDEO_VIEW", videoCursor);
+      for (const e of entries) if (e.isIntersecting && !videosDone && !loading) fetchPage("VIDEO_VIEW", videoCursor);
     }, { rootMargin: "300px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [fetchPage, videoCursor]);
+  }, [fetchPage, videoCursor, videosDone]);
 
   // Infinite scroll for subs
   useEffect(() => {
     const el = subSentinel.current;
     if (!el) return;
     const io = new IntersectionObserver((entries) => {
-      for (const e of entries) if (e.isIntersecting) fetchPage("SUBSCRIBER", subCursor);
+      for (const e of entries) if (e.isIntersecting && !subsDone && !loading) fetchPage("SUBSCRIBER", subCursor);
     }, { rootMargin: "300px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [fetchPage, subCursor]);
+  }, [fetchPage, subCursor, subsDone]);
 
   // Expose a helper to open the next available video (for auto-play queue)
   useEffect(() => {
@@ -117,6 +119,27 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
   const availableVideos = videos.filter((v) => v.userState === "AVAILABLE");
   const availableSubs = subs.filter((s) => s.userState === "AVAILABLE");
 
+  if (initialLoad) {
+    return (
+      <div className="space-y-8">
+        <section>
+          <div className="h-6 w-32 skeleton rounded mb-3" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-[rgb(var(--border))] overflow-hidden">
+                <div className="skeleton w-full" style={{ aspectRatio: "16/9" }} />
+                <div className="p-3 space-y-2">
+                  <div className="skeleton h-4 w-3/4 rounded" />
+                  <div className="skeleton h-3 w-1/2 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Videos section */}
@@ -127,11 +150,11 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold">Videos</h2>
-            <p className="text-xs text-ink-500">Watch in-app for {availableVideos.length > 0 ? "30s+" : "coins"}</p>
+            <p className="text-xs text-ink-500">Watch in-app for coins</p>
           </div>
-          <div className="ml-auto chip">{availableVideos.length} available</div>
+          {videos.length > 0 && <div className="ml-auto chip">{availableVideos.length} available</div>}
         </div>
-        {videos.length === 0 && !loading ? (
+        {videos.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-sm text-ink-500">No video campaigns yet. Create one from the Boost tab.</p>
           </div>
@@ -143,7 +166,7 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
           </div>
         )}
         <div ref={videoSentinel} className="h-10 grid place-items-center mt-3">
-          {loading && videos.length < 5 && <Loader2 className="animate-spin" size={20} />}
+          {loading && <Loader2 className="animate-spin" size={20} />}
           {videosDone && videos.length > 0 && <div className="text-xs text-ink-500">No more videos</div>}
         </div>
       </section>
@@ -158,9 +181,9 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
             <h2 className="text-lg sm:text-xl font-extrabold">Subscribe to earn</h2>
             <p className="text-xs text-ink-500">Verify your subscription via Google OAuth</p>
           </div>
-          <div className="ml-auto chip">{availableSubs.length} available</div>
+          {subs.length > 0 && <div className="ml-auto chip">{availableSubs.length} available</div>}
         </div>
-        {subs.length === 0 && !loading ? (
+        {subs.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-sm text-ink-500">No subscriber campaigns yet. Create one from the Boost tab.</p>
           </div>
@@ -172,7 +195,7 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
           </div>
         )}
         <div ref={subSentinel} className="h-10 grid place-items-center mt-3">
-          {loading && subs.length < 5 && <Loader2 className="animate-spin" size={20} />}
+          {loading && <Loader2 className="animate-spin" size={20} />}
           {subsDone && subs.length > 0 && <div className="text-xs text-ink-500">No more channels</div>}
         </div>
       </section>

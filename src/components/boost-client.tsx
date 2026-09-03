@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Coins, Eye, Users, Pause, Play, Trash2, Youtube, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
+import { Coins, Eye, Users, Pause, Play, Trash2, Youtube, ExternalLink, Loader2, CheckCircle2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "./toast";
@@ -24,6 +24,19 @@ type Settings = {
 export function BoostClient({ balance, connected, youtube, settings, campaigns }: { balance: number; connected: boolean; youtube: YT; settings: Settings; campaigns: Campaign[] }) {
   const router = useRouter();
   const [tab, setTab] = useState<"VIDEO_VIEW" | "SUBSCRIBER">("VIDEO_VIEW");
+  const [subsModal, setSubsModal] = useState<{ open: boolean; campaignId: string | null }>({ open: false, campaignId: null });
+  const [subsData, setSubsData] = useState<{ subscribers: any[]; campaign: any } | null>(null);
+  const [subsLoading, setSubsLoading] = useState(false);
+
+  async function loadSubscribers(campaignId: string) {
+    setSubsLoading(true);
+    const r = await fetch(`/api/boost/campaigns/${campaignId}/subscribers`);
+    setSubsLoading(false);
+    if (r.ok) {
+      const j = await r.json();
+      setSubsData(j);
+    }
+  }
 
   if (!connected) {
     return (
@@ -58,11 +71,53 @@ export function BoostClient({ balance, connected, youtube, settings, campaigns }
             <div className="text-sm text-ink-500">No campaigns yet</div>
           ) : (
             <div className="space-y-2 max-h-96 overflow-auto scroll-thin">
-              {campaigns.map((c) => <CampaignRow key={c.id} c={c} onChange={() => router.refresh()} />)}
+              {campaigns.map((c) => <CampaignRow key={c.id} c={c} onChange={() => router.refresh()} onViewSubs={(id) => { setSubsModal({ open: true, campaignId: id }); loadSubscribers(id); }} />)}
             </div>
           )}
         </div>
       </div>
+      {subsModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSubsModal({ open: false, campaignId: null })}>
+          <div className="card p-0 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-[rgb(var(--border))] flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">Campaign subscribers</h3>
+                <p className="text-xs text-ink-500">Live verification via YouTube API</p>
+              </div>
+              <button onClick={() => setSubsModal({ open: false, campaignId: null })} className="btn btn-ghost h-8 w-8 p-0"><X size={16} /></button>
+            </div>
+            <div className="p-4 overflow-auto flex-1">
+              {subsLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="animate-spin" size={24} /></div>
+              ) : subsData?.subscribers?.length === 0 ? (
+                <div className="text-sm text-ink-500 text-center py-8">No subscribers yet</div>
+              ) : (
+                <div className="space-y-2">
+                  {subsData?.subscribers.map((s) => (
+                    <div key={s.id} className="flex items-center gap-3 p-2 rounded-lg border border-[rgb(var(--border))]">
+                      <div className="size-8 rounded-full bg-[rgb(var(--border))] flex-shrink-0">
+                        {s.userImage && <img src={s.userImage} alt="" className="size-full object-cover rounded-full" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate">{s.userName || s.userEmail}</div>
+                        <div className="text-xs text-ink-500">{s.state} · {s.verifiedAt ? timeAgo(s.verifiedAt) : "—"}</div>
+                      </div>
+                      <div className="text-right">
+                        {s.state === "VERIFIED" && (
+                          <span className={`text-xs font-semibold ${s.liveVerified === true ? "text-emerald-600" : s.liveVerified === false ? "text-rose-600" : "text-amber-600"}`}>
+                            {s.liveVerified === true ? "Still subscribed" : s.liveVerified === false ? "Unsubscribed" : "Checking…"}
+                          </span>
+                        )}
+                        {s.state === "REVOKED" && <span className="text-xs text-rose-600">Revoked</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -304,7 +359,7 @@ function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; 
   );
 }
 
-function CampaignRow({ c, onChange }: { c: Campaign; onChange: () => void }) {
+function CampaignRow({ c, onChange, onViewSubs }: { c: Campaign; onChange: () => void; onViewSubs?: (id: string) => void }) {
   const [busy, setBusy] = useState(false);
   async function setStatus(status: string) {
     setBusy(true);
@@ -322,13 +377,13 @@ function CampaignRow({ c, onChange }: { c: Campaign; onChange: () => void }) {
         <div className="chip">{c.rewardPerAction} 🪙</div>
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-[rgb(var(--border))] overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-brand-500 to-pink-500" style={{ width: `${pct}%` }} />
+        <div className="h-full bg-gradient-to-r from-brand-500 to-rose-500" style={{ width: `${pct}%` }} />
       </div>
       <div className="mt-1 flex items-center justify-between text-[11px] text-ink-500">
         <span>{formatNumber(c.completedActions)}/{formatNumber(c.maxActions)} actions</span>
         <span>{formatNumber(c.spentBudget)}/{formatNumber(c.totalBudget)} 🪙</span>
       </div>
-      <div className="mt-2 flex gap-1">
+      <div className="mt-2 flex gap-1 flex-wrap">
         {c.status === "ACTIVE" ? (
           <button onClick={() => setStatus("PAUSED")} disabled={busy} className="btn btn-ghost h-7 px-2 text-xs"><Pause size={12} /> Pause</button>
         ) : c.status === "PAUSED" ? (
@@ -341,7 +396,10 @@ function CampaignRow({ c, onChange }: { c: Campaign; onChange: () => void }) {
           <a href={`https://www.youtube.com/watch?v=${c.youtubeVideoId}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost h-7 px-2 text-xs"><ExternalLink size={12} /></a>
         )}
         {c.type === "SUBSCRIBER" && c.youtubeChannelId && (
-          <a href={`https://www.youtube.com/channel/${c.youtubeChannelId}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost h-7 px-2 text-xs"><ExternalLink size={12} /></a>
+          <>
+            <a href={`https://www.youtube.com/channel/${c.youtubeChannelId}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost h-7 px-2 text-xs"><ExternalLink size={12} /></a>
+            <button onClick={() => onViewSubs?.(c.id)} disabled={busy} className="btn btn-ghost h-7 px-2 text-xs"><Users size={12} /> Subs</button>
+          </>
         )}
       </div>
     </div>

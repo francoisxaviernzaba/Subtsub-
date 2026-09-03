@@ -33,8 +33,8 @@ export function BottomNav() {
                   className={cn(
                     "size-14 rounded-full grid place-items-center text-white shadow-glow ring-4",
                     active
-                      ? "bg-gradient-to-br from-pink-500 to-rose-500 ring-pink-200/60"
-                      : "bg-gradient-to-br from-brand-500 to-pink-500 ring-white/60 dark:ring-gray-950/60"
+                      ? "bg-gradient-to-br from-rose-500 to-red-500 ring-rose-200/60"
+                      : "bg-gradient-to-br from-brand-500 to-rose-500 ring-white/60 dark:ring-gray-950/60"
                   )}
                 >
                   <Icon size={26} strokeWidth={2.4} />

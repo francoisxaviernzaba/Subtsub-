@@ -4,14 +4,14 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { adminEmails } from "@/lib/auth";
 
-export default async function SignupPage({ searchParams }: { searchParams: { from?: string; error?: string } }) {
+export default async function SignupPage({ searchParams }: { searchParams: { from?: string; error?: string; ref?: string } }) {
   const session = await auth();
   if (session?.user) redirect(searchParams.from || "/s2s");
 
   return (
     <div className="min-h-screen grid place-items-center px-5">
       <div className="card p-8 max-w-md w-full">
-        <div className="mx-auto size-12 rounded-2xl bg-gradient-to-br from-brand-500 to-pink-500 grid place-items-center text-white font-extrabold shadow-glow">S2S</div>
+        <div className="mx-auto size-12 rounded-2xl bg-gradient-to-br from-brand-500 to-rose-500 grid place-items-center text-white font-extrabold shadow-glow">S2S</div>
         <h1 className="mt-4 text-2xl font-bold text-center">Create account</h1>
         <p className="mt-2 text-ink-500 text-sm text-center">Sign up with email and password.</p>
 
@@ -22,6 +22,7 @@ export default async function SignupPage({ searchParams }: { searchParams: { fro
         )}
 
         <form action={signup} className="mt-6 space-y-4">
+          {searchParams.ref && <input type="hidden" name="ref" value={searchParams.ref} />}
           <div>
             <label className="block text-sm font-medium mb-1">Name</label>
             <input name="name" type="text" className="input w-full" placeholder="Your name" />
@@ -49,6 +50,7 @@ async function signup(formData: FormData) {
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
   const name = (formData.get("name") as string)?.trim();
+  const ref = (formData.get("ref") as string)?.trim();
   const from = (formData.get("from") as string) || "/s2s";
   if (!email || !password) {
     redirect(`/signup?from=${encodeURIComponent(from)}&error=${encodeURIComponent("Email and password are required.")}`);
@@ -59,12 +61,20 @@ async function signup(formData: FormData) {
   }
   const passwordHash = await bcrypt.hash(password, 10);
   const role = adminEmails.includes(email) ? "ADMIN" : "USER";
+
+  let invitedById: string | undefined;
+  if (ref) {
+    const inviter = await prisma.user.findFirst({ where: { inviteCode: ref } });
+    if (inviter) invitedById = inviter.id;
+  }
+
   await prisma.user.create({
     data: {
       email,
       name: name || email.split("@")[0],
       passwordHash,
       role,
+      invitedById,
     },
   });
   redirect(`/login?from=${encodeURIComponent(from)}`);

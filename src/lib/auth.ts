@@ -6,6 +6,7 @@ import { prisma } from "./db";
 import bcrypt from "bcryptjs";
 import { getSettings } from "./settings";
 import { applySecrets } from "./secrets";
+import { creditCoins } from "./coins";
 
 // Apply SECRETS_BLOB to process.env on every cold start
 applySecrets();
@@ -87,6 +88,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
       }
       await prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: new Date() } });
+      const settings = await getSettings();
+      if (settings.welcomeCoins > 0) {
+        await creditCoins({
+          userId: user.id!,
+          amount: settings.welcomeCoins,
+          type: "ADMIN_ADJUSTMENT",
+          note: `Welcome bonus for new signup`,
+          idempotencyKey: `welcome.${user.id}`,
+        });
+        await prisma.notification.create({
+          data: {
+            userId: user.id!,
+            kind: "COIN_PURCHASE",
+            title: `+${settings.welcomeCoins} welcome coins`,
+            body: `Welcome to SUB2SUB! You received ${settings.welcomeCoins} coins for signing up.`,
+            link: "/transactions",
+          },
+        }).catch(() => {});
+      }
     },
     async signIn({ user }) {
       if (!user.id) return;

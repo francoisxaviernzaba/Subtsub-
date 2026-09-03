@@ -12,6 +12,8 @@ export type Settings = {
   coinPackages: { coins: number; amountCents: number; currency: string }[];
   adminEmails: string[];
   enforceChannelPermanence: boolean;
+  inviteRewardCoins: number;
+  welcomeCoins: number;
 };
 
 const DEFAULTS: Settings = {
@@ -34,6 +36,8 @@ const DEFAULTS: Settings = {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean),
   enforceChannelPermanence: true,
+  inviteRewardCoins: 50,
+  welcomeCoins: 100,
 };
 
 export async function getSettings(): Promise<Settings> {

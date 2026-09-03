@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Coins, TrendingUp, TrendingDown, ShoppingCart, Users, Eye, CheckCircle2, Rocket } from "lucide-react";
 import Link from "next/link";
+import { InviteSection } from "@/components/invite-section";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,8 @@ export default async function ProfilePage() {
           );
         })}
       </div>
+
+      <InviteSection userId={u.user.id} />
 
       <div className="grid sm:grid-cols-3 gap-3">
         <Link href="/transactions" className="card p-4 flex items-center gap-3 hover:shadow-soft">

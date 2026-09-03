@@ -31,7 +31,7 @@ export function Header({ user, balance, youtube }: { user: User; balance: number
         style={{ WebkitBackdropFilter: "blur(20px) saturate(180%)" }}
       >
         <Link href="/s2s" className="flex items-center gap-2 font-extrabold tracking-tight">
-          <div className="size-8 rounded-2xl bg-gradient-to-br from-brand-500 to-pink-500 grid place-items-center text-white text-xs shadow-glow">S2S</div>
+          <div className="size-8 rounded-2xl bg-gradient-to-br from-brand-500 to-rose-500 grid place-items-center text-white text-xs shadow-glow">S2S</div>
           <span className="hidden sm:inline">SUB2SUB</span>
         </Link>
 

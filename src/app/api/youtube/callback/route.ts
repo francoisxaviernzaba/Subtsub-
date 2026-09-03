@@ -5,6 +5,7 @@ import { makeOAuth2Client } from "@/lib/youtube";
 import { encryptToken } from "@/lib/crypto";
 import { handleError, HttpError } from "@/lib/api";
 import { getSettings } from "@/lib/settings";
+import { creditCoins } from "@/lib/coins";
 
 export async function GET(req: NextRequest) {
   try {
@@ -87,6 +88,35 @@ export async function GET(req: NextRequest) {
       },
       update: updateData,
     });
+
+    const justConnected = existingForUser === null;
+    if (justConnected) {
+      const me = await prisma.user.findUnique({ where: { id: u.user.id } });
+      const inviterId = me?.invitedById;
+      const settings = await getSettings();
+      if (inviterId && settings.inviteRewardCoins > 0) {
+        await creditCoins({
+          userId: inviterId,
+          amount: settings.inviteRewardCoins,
+          type: "ADMIN_ADJUSTMENT",
+          note: `Invite reward for ${me?.email} connecting YouTube`,
+          idempotencyKey: `invite.reward.${u.user.id}`,
+        });
+        await prisma.notification.create({
+          data: {
+            userId: inviterId,
+            kind: "COIN_PURCHASE",
+            title: `+${settings.inviteRewardCoins} invite coins`,
+            body: `Your invite ${me?.email} connected YouTube. You earned ${settings.inviteRewardCoins} coins.`,
+            link: "/transactions",
+          },
+        }).catch(() => {});
+      }
+      await prisma.user.update({
+        where: { id: u.user.id },
+        data: { inviteCompletedAt: new Date() },
+      }).catch(() => {});
+    }
 
     // create notification
     await prisma.notification.create({

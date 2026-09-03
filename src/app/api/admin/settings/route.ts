@@ -14,6 +14,8 @@ const Body = z.object({
   maxRewardPerAction: z.number().int().min(1).optional(),
   enforceChannelPermanence: z.boolean().optional(),
   coinPackages: z.array(z.object({ coins: z.number().int().min(1), amountCents: z.number().int().min(1), currency: z.string().min(3) })).optional(),
+  inviteRewardCoins: z.number().int().min(0).optional(),
+  welcomeCoins: z.number().int().min(0).optional(),
 });
 
 export async function POST(req: NextRequest) {

@@ -13,6 +13,8 @@ type Settings = {
   coinPackages: { coins: number; amountCents: number; currency: string }[];
   adminEmails: string[];
   enforceChannelPermanence: boolean;
+  inviteRewardCoins: number;
+  welcomeCoins: number;
 };
 type User = { id: string; email: string; name: string | null; role: string; status: string; createdAt: string; yt: { title: string; handle: string | null; thumb: string | null } | null };
 type Campaign = { id: string; ownerEmail: string; type: string; status: string; title: string; spent: number; budget: number; completed: number; max: number; createdAt: string };
@@ -87,6 +89,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
         <NumField label="Max budget" value={s.maxBudget} onChange={(v) => setS({ ...s, maxBudget: v })} />
         <NumField label="Min reward/action" value={s.minRewardPerAction} onChange={(v) => setS({ ...s, minRewardPerAction: v })} />
         <NumField label="Max reward/action" value={s.maxRewardPerAction} onChange={(v) => setS({ ...s, maxRewardPerAction: v })} />
+        <NumField label="Welcome coins (new signup)" value={s.welcomeCoins} onChange={(v) => setS({ ...s, welcomeCoins: v })} />
+        <NumField label="Invite reward coins" value={s.inviteRewardCoins} onChange={(v) => setS({ ...s, inviteRewardCoins: v })} />
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={s.enforceChannelPermanence} onChange={(e) => setS({ ...s, enforceChannelPermanence: e.target.checked })} />

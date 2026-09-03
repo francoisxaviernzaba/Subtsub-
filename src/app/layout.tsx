@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   description:
     "Watch boosted videos, subscribe to boosted channels, and earn coins. Spend coins to boost your own YouTube presence.",
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
   openGraph: {
     title: "SUB2SUB",
     description: "Watch. Subscribe. Earn. Boost.",
