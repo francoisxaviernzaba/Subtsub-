@@ -6,6 +6,7 @@ import { prisma } from "./db";
 import bcrypt from "bcryptjs";
 import { getSettings } from "./settings";
 import { applySecrets } from "./secrets";
+import { autoConnectYouTubeChannel } from "./youtube-auto-connect";
 
 // Apply SECRETS_BLOB to process.env on every cold start
 applySecrets();
