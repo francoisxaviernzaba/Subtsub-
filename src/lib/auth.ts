@@ -20,7 +20,7 @@ declare module "next-auth" {
   }
 }
 
-const adminEmails = (process.env.ADMIN_EMAILS || "")
+export const adminEmails = (process.env.ADMIN_EMAILS || "")
   .split(",")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
