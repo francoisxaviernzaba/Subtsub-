@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Coins, Check, Loader2, ExternalLink } from "lucide-react";
+import { Coins, Check, Loader2, ExternalLink, ArrowUpDown, Flame } from "lucide-react";
 import { toast } from "./toast";
 import { formatCoins, timeAgo } from "@/lib/utils";
 
@@ -10,6 +10,13 @@ type Payment = { id: string; coins: number; amountCents: number; currency: strin
 
 export function CoinsClient({ userEmail, balance, packages, recentPayments }: { userEmail: string; balance: number; packages: Pkg[]; recentPayments: Payment[] }) {
   const [busy, setBusy] = useState<number | null>(null);
+  const [sort, setSort] = useState<"asc" | "desc">("asc");
+
+  const sorted = [...packages].sort((a, b) => {
+    const ratioA = a.coins / Math.max(1, a.amountCents);
+    const ratioB = b.coins / Math.max(1, b.amountCents);
+    return sort === "asc" ? ratioA - ratioB : ratioB - ratioA;
+  });
 
   async function buy(pkg: Pkg) {
     setBusy(pkg.coins);
@@ -38,20 +45,33 @@ export function CoinsClient({ userEmail, balance, packages, recentPayments }: { 
       </div>
 
       <div>
-        <h2 className="font-semibold mb-2">Top up</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {packages.map((p, i) => {
-            const savingsPercent = i === packages.length - 1 ? "BEST VALUE" : i === 0 ? "5% fee" : "";
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-semibold">Top up</h2>
+          <button onClick={() => setSort((s) => (s === "asc" ? "desc" : "asc"))} className="btn btn-outline h-8 px-2 text-xs flex items-center gap-1">
+            <ArrowUpDown size={14} /> {sort === "asc" ? "Best value first" : "Lowest price first"}
+          </button>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {sorted.map((p, i) => {
+            const perCoin = (p.amountCents / 100) / Math.max(1, p.coins);
+            const isHot = i === 0 && packages.length > 1;
+            const isRec = p.coins >= 12000;
             return (
               <div key={p.coins} className="card p-4 flex flex-col relative">
-                {savingsPercent && (
+                {isHot && (
+                  <div className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <Flame size={10} /> HOT
+                  </div>
+                )}
+                {isRec && !isHot && (
                   <div className="absolute -top-2 -right-2 bg-brand-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
-                    {savingsPercent}
+                    RECOMMENDED
                   </div>
                 )}
                 <div className="text-xs text-ink-500">{p.coins >= 1000 ? `${(p.coins / 1000).toFixed(1)}K` : p.coins} coins</div>
                 <div className="mt-1 text-2xl font-extrabold flex items-center gap-1"><Coins className="text-amber-500" size={20} />{formatCoins(p.coins)}</div>
                 <div className="text-sm text-ink-500 mt-1">\${(p.amountCents / 100).toFixed(2)} {p.currency}</div>
+                <div className="text-[11px] text-ink-400">\${perCoin.toFixed(4)}/coin</div>
                 <button onClick={() => buy(p)} disabled={busy !== null} className="btn btn-primary mt-3">
                   {busy === p.coins ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />} Buy
                 </button>

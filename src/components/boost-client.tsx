@@ -370,12 +370,12 @@ function CampaignRow({ c, onChange, onViewSubs }: { c: Campaign; onChange: () =>
   const pct = c.totalBudget > 0 ? Math.min(100, Math.round((c.spentBudget / c.totalBudget) * 100)) : 0;
   return (
     <div className="rounded-xl border border-[rgb(var(--border))] p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold truncate">{c.title}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold break-words">{c.title}</div>
           <div className="text-[11px] text-ink-500">{c.type === "VIDEO_VIEW" ? "Video" : "Subscriber"} · {c.status.toLowerCase()} · {timeAgo(c.createdAt)}</div>
         </div>
-        <div className="chip">{c.rewardPerAction} 🪙</div>
+        <div className="chip flex-shrink-0">{c.rewardPerAction} 🪙</div>
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-[rgb(var(--border))] overflow-hidden">
         <div className="h-full bg-gradient-to-r from-brand-500 to-rose-500" style={{ width: `${pct}%` }} />
