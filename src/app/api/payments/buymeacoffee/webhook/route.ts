@@ -8,6 +8,7 @@ const COIN_MAP: Record<string, number> = {
   [process.env.BUYMEACOFFEE_PRODUCT_1500 || ""]: 1500,
   [process.env.BUYMEACOFFEE_PRODUCT_5000 || ""]: 5000,
   [process.env.BUYMEACOFFEE_PRODUCT_12000 || ""]: 12000,
+  [process.env.BUYMEACOFFEE_PRODUCT_30000 || ""]: 30000,
 };
 
 export async function POST(req: NextRequest) {

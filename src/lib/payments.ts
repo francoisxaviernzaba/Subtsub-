@@ -65,6 +65,7 @@ class BuyMeACoffeeProvider implements PaymentProvider {
       1500: process.env.BUYMEACOFFEE_PRODUCT_1500 || "",
       5000: process.env.BUYMEACOFFEE_PRODUCT_5000 || "",
       12000: process.env.BUYMEACOFFEE_PRODUCT_12000 || "",
+      30000: process.env.BUYMEACOFFEE_PRODUCT_30000 || "",
     };
   }
 
