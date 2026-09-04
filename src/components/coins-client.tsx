@@ -40,16 +40,24 @@ export function CoinsClient({ userEmail, balance, packages, recentPayments }: { 
       <div>
         <h2 className="font-semibold mb-2">Top up</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {packages.map((p) => (
-            <div key={p.coins} className="card p-4 flex flex-col">
-              <div className="text-xs text-ink-500">{p.coins >= 1000 ? `${(p.coins / 1000).toFixed(1)}K` : p.coins} coins</div>
-              <div className="mt-1 text-2xl font-extrabold flex items-center gap-1"><Coins className="text-amber-500" size={20} />{formatCoins(p.coins)}</div>
-              <div className="text-sm text-ink-500">${(p.amountCents / 100).toFixed(2)} {p.currency}</div>
-              <button onClick={() => buy(p)} disabled={busy !== null} className="btn btn-primary mt-3">
-                {busy === p.coins ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />} Buy
-              </button>
-            </div>
-          ))}
+          {packages.map((p, i) => {
+            const savingsPercent = i === packages.length - 1 ? "BEST VALUE" : i === 0 ? "5% fee" : "";
+            return (
+              <div key={p.coins} className="card p-4 flex flex-col relative">
+                {savingsPercent && (
+                  <div className="absolute -top-2 -right-2 bg-brand-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                    {savingsPercent}
+                  </div>
+                )}
+                <div className="text-xs text-ink-500">{p.coins >= 1000 ? `${(p.coins / 1000).toFixed(1)}K` : p.coins} coins</div>
+                <div className="mt-1 text-2xl font-extrabold flex items-center gap-1"><Coins className="text-amber-500" size={20} />{formatCoins(p.coins)}</div>
+                <div className="text-sm text-ink-500 mt-1">\${(p.amountCents / 100).toFixed(2)} {p.currency}</div>
+                <button onClick={() => buy(p)} disabled={busy !== null} className="btn btn-primary mt-3">
+                  {busy === p.coins ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />} Buy
+                </button>
+              </div>
+            );
+          })}
         </div>
         <p className="text-[11px] text-ink-500 mt-2">You will be redirected to Buy Me a Coffee to complete payment. Coins are credited automatically after purchase.</p>
       </div>

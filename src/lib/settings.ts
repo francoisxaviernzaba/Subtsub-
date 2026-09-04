@@ -26,11 +26,11 @@ const DEFAULTS: Settings = {
   minRewardPerAction: 1,
   maxRewardPerAction: 1000,
   coinPackages: [
-    { coins: 500, amountCents: 50, currency: "USD" },
-    { coins: 1500, amountCents: 150, currency: "USD" },
+    { coins: 1000, amountCents: 100, currency: "USD" },
+    { coins: 2000, amountCents: 200, currency: "USD" },
     { coins: 5000, amountCents: 500, currency: "USD" },
     { coins: 12000, amountCents: 1000, currency: "USD" },
-    { coins: 30000, amountCents: 2000, currency: "USD" },
+    { coins: 25000, amountCents: 2000, currency: "USD" },
   ],
   adminEmails: (process.env.ADMIN_EMAILS || "")
     .split(",")

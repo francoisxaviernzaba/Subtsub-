@@ -4,11 +4,11 @@ import { creditCoins } from "@/lib/coins";
 import crypto from "node:crypto";
 
 const COIN_MAP: Record<string, number> = {
-  [process.env.BUYMEACOFFEE_PRODUCT_500 || ""]: 500,
-  [process.env.BUYMEACOFFEE_PRODUCT_1500 || ""]: 1500,
+  [process.env.BUYMEACOFFEE_PRODUCT_1000 || ""]: 1000,
+  [process.env.BUYMEACOFFEE_PRODUCT_2000 || ""]: 2000,
   [process.env.BUYMEACOFFEE_PRODUCT_5000 || ""]: 5000,
   [process.env.BUYMEACOFFEE_PRODUCT_12000 || ""]: 12000,
-  [process.env.BUYMEACOFFEE_PRODUCT_30000 || ""]: 30000,
+  [process.env.BUYMEACOFFEE_PRODUCT_25000 || ""]: 25000,
 };
 
 export async function POST(req: NextRequest) {

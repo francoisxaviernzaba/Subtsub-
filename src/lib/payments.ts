@@ -61,11 +61,11 @@ class BuyMeACoffeeProvider implements PaymentProvider {
   constructor() {
     this.username = process.env.BUYMEACOFFEE_USERNAME || "";
     this.productMap = {
-      500: process.env.BUYMEACOFFEE_PRODUCT_500 || "",
-      1500: process.env.BUYMEACOFFEE_PRODUCT_1500 || "",
+      1000: process.env.BUYMEACOFFEE_PRODUCT_1000 || "",
+      2000: process.env.BUYMEACOFFEE_PRODUCT_2000 || "",
       5000: process.env.BUYMEACOFFEE_PRODUCT_5000 || "",
       12000: process.env.BUYMEACOFFEE_PRODUCT_12000 || "",
-      30000: process.env.BUYMEACOFFEE_PRODUCT_30000 || "",
+      25000: process.env.BUYMEACOFFEE_PRODUCT_25000 || "",
     };
   }
 
