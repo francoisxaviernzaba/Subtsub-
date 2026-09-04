@@ -127,6 +127,33 @@ function SettingsForm({ initial }: { initial: Settings }) {
         <NumField label="Welcome coins (new signup)" value={s.welcomeCoins} onChange={(v) => setS({ ...s, welcomeCoins: v })} />
         <NumField label="Invite reward coins" value={s.inviteRewardCoins} onChange={(v) => setS({ ...s, inviteRewardCoins: v })} />
       </div>
+      <div className="space-y-2">
+        <div className="text-sm font-medium">Coin packages</div>
+        {(s.coinPackages || []).map((pkg, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <input type="number" className="input w-24" value={pkg.coins} onChange={(e) => {
+              const next = [...s.coinPackages];
+              next[idx] = { ...next[idx], coins: Number(e.target.value) };
+              setS({ ...s, coinPackages: next });
+            }} placeholder="Coins" />
+            <input type="number" className="input w-28" value={pkg.amountCents} onChange={(e) => {
+              const next = [...s.coinPackages];
+              next[idx] = { ...next[idx], amountCents: Number(e.target.value) };
+              setS({ ...s, coinPackages: next });
+            }} placeholder="Price cents" />
+            <input type="text" className="input w-20" value={pkg.currency} onChange={(e) => {
+              const next = [...s.coinPackages];
+              next[idx] = { ...next[idx], currency: e.target.value };
+              setS({ ...s, coinPackages: next });
+            }} placeholder="USD" />
+            <button onClick={() => {
+              const next = s.coinPackages.filter((_, i) => i !== idx);
+              setS({ ...s, coinPackages: next });
+            }} className="text-rose-600 text-xs">Remove</button>
+          </div>
+        ))}
+        <button onClick={() => setS({ ...s, coinPackages: [...s.coinPackages, { coins: 0, amountCents: 0, currency: "USD" }] })} className="btn btn-outline h-8 px-2 text-xs">+ Add package</button>
+      </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={s.enforceChannelPermanence} onChange={(e) => setS({ ...s, enforceChannelPermanence: e.target.checked })} />
         Enforce permanent YouTube channel binding
