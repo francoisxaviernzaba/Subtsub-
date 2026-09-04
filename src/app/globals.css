@@ -34,11 +34,14 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 body {
-  background-image: url("/bg-youtube-coins.jpg");
+  background-image: url("/bg-youtube-light.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
+}
+.dark body {
+  background-image: url("/bg-youtube-coins.jpg");
 }
 
 ::selection { background: rgb(var(--brand) / .2); }
