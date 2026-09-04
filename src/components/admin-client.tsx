@@ -136,11 +136,14 @@ function SettingsForm({ initial }: { initial: Settings }) {
               next[idx] = { ...next[idx], coins: Number(e.target.value) };
               setS({ ...s, coinPackages: next });
             }} placeholder="Coins" />
-            <input type="number" className="input w-28" value={pkg.amountCents} onChange={(e) => {
+            <input type="number" step="0.01" className="input w-28" value={Number((pkg.amountCents / 100).toFixed(2))} onChange={(e) => {
+              const dollars = Number(e.target.value);
+              if (!isFinite(dollars)) return;
+              const cents = Math.round(dollars * 100);
               const next = [...s.coinPackages];
-              next[idx] = { ...next[idx], amountCents: Number(e.target.value) };
+              next[idx] = { ...next[idx], amountCents: Math.max(100, cents) };
               setS({ ...s, coinPackages: next });
-            }} placeholder="Price cents" />
+            }} placeholder="Price USD" />
             <input type="text" className="input w-20" value={pkg.currency} onChange={(e) => {
               const next = [...s.coinPackages];
               next[idx] = { ...next[idx], currency: e.target.value };
@@ -152,7 +155,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
             }} className="text-rose-600 text-xs">Remove</button>
           </div>
         ))}
-        <button onClick={() => setS({ ...s, coinPackages: [...s.coinPackages, { coins: 0, amountCents: 0, currency: "USD" }] })} className="btn btn-outline h-8 px-2 text-xs">+ Add package</button>
+        <button onClick={() => setS({ ...s, coinPackages: [...s.coinPackages, { coins: 0, amountCents: 100, currency: "USD" }] })} className="btn btn-outline h-8 px-2 text-xs">+ Add package</button>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={s.enforceChannelPermanence} onChange={(e) => setS({ ...s, enforceChannelPermanence: e.target.checked })} />
