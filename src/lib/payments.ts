@@ -69,15 +69,17 @@ class BuyMeACoffeeProvider implements PaymentProvider {
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
-    const productSlug = this.productMap[input.coins];
-    if (!productSlug) {
+    const productId = this.productMap[input.coins];
+    if (!productId) {
       throw new Error(`No Buy Me a Coffee product configured for ${input.coins} coins`);
     }
     if (!this.username) {
       throw new Error("BUYMEACOFFEE_USERNAME is not configured");
     }
     const paymentId = input.metadata?.paymentId || `bmac_${input.userId}_${Date.now()}`;
-    const checkoutUrl = `https://www.buymeacoffee.com/${this.username}/products/${productSlug}`;
+    // Support both slug format and numeric ID format
+    const isNumeric = /^\d+$/.test(productId);
+    const checkoutUrl = `https://www.buymeacoffee.com/${this.username}/${isNumeric ? "e" : "products"}/${productId}`;
     return {
       paymentId,
       provider: "buymeacoffee",
