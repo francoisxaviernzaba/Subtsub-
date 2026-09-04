@@ -3,7 +3,7 @@ import { FAQSchema } from "@/components/schema";
 
 export const metadata: Metadata = {
   title: "Frequently Asked Questions · SUB2SUB",
-  description: "Answers to common questions about SUB2SUB, YouTube growth, coin earning, and boosting.",
+  description: "Answers to common questions about SUB2SUB, YouTube growth, coin earning, boosting, and creator safety.",
 };
 
 const faqs = [

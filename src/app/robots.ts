@@ -1,13 +1,17 @@
 import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXTAUTH_URL || "https://subtsub.vercel.app";
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: ["/api/", "/_next/"],
-    },
-    sitemap: `${base}/sitemap.xml`,
+    rules: [
+      { userAgent: "*", allow: ["/"], disallow: ["/admin", "/api/"] },
+      { userAgent: "Googlebot", allow: ["/"] },
+      { userAgent: "Googlebot-Image", allow: ["/"], disallow: ["/admin", "/api/"] },
+      { userAgent: "Bingbot", allow: ["/"] },
+      { userAgent: "GPTBot", allow: ["/"] },
+      { userAgent: "ClaudeBot", allow: ["/"] },
+      { userAgent: "PerplexityBot", allow: ["/"] },
+      { userAgent: "Applebot", allow: ["/"] },
+    ],
+    sitemap: "https://sub2sub.com/sitemap.xml",
   };
 }

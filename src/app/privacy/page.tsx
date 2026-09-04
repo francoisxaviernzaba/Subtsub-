@@ -1,19 +1,17 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · SUB2SUB",
-  description: "Privacy policy for SUB2SUB platform.",
+  title: "Privacy Policy — Sub2Sub",
+  description: "Privacy policy for Sub2Sub creator growth platform.",
 };
 
 export default function PrivacyPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Privacy Policy</h1>
-        <p className="text-sm text-ink-500">Last updated: September 3, 2026</p>
-      </div>
+      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Privacy Policy</h1>
+      <p className="text-sm text-ink-500">Last updated: September 4, 2026</p>
       <div className="card p-6 space-y-4 text-sm text-ink-500 leading-relaxed">
-        <p>SUB2SUB respects your privacy and is committed to protecting your personal data.</p>
+        <p>Sub2Sub respects your privacy and is committed to protecting your personal data.</p>
         <h2 className="text-lg font-semibold text-ink-900">1. Information We Collect</h2>
         <p>We collect: (a) Account information (email, name, profile picture); (b) YouTube channel information (channel ID, handle, subscriber count); (c) Usage data (tasks completed, coins earned); (d) Payment information (processed securely by Buy Me a Coffee).</p>
         <h2 className="text-lg font-semibold text-ink-900">2. How We Use Your Information</h2>
@@ -29,7 +27,7 @@ export default function PrivacyPage() {
         <h2 className="text-lg font-semibold text-ink-900">7. Your Rights</h2>
         <p>You can request access to, correction of, or deletion of your personal data by contacting us. You can also delete your account at any time.</p>
         <h2 className="text-lg font-semibold text-ink-900">8. Contact</h2>
-        <p>For privacy concerns, contact us at privacy@subtsub.vercel.app.</p>
+        <p>For privacy concerns, contact us at privacy@sub2sub.com.</p>
       </div>
     </div>
   );
