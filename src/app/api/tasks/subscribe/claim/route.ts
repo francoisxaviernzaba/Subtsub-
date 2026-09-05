@@ -4,10 +4,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleError, HttpError, withIdempotency } from "@/lib/api";
 import { rateLimit, getClientKey } from "@/lib/ratelimit";
-import { checkSubscriptionViaCreator } from "@/lib/youtube";
+import { checkSubscriptionViaCreator, checkSubscriptionViaSubscriberOAuth, refreshAccessToken } from "@/lib/youtube";
 import { creditCoins } from "@/lib/coins";
 import { getSettings } from "@/lib/settings";
 import { addXp, updateDailyStreak, incrementDailyQuest } from "@/lib/gamification";
+import { decryptToken, encryptToken } from "@/lib/crypto";
 
 const Body = z.object({
   campaignId: z.string().min(1),
@@ -51,8 +52,8 @@ export async function POST(req: NextRequest) {
           if (existing.state === "PENDING") throw new HttpError(409, "PENDING", "Verification already in progress");
         }
 
-        const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
-        if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
+      const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
+      if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
 
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
 
@@ -76,12 +77,28 @@ export async function POST(req: NextRequest) {
         };
       });
 
-      const verify = await checkSubscriptionViaCreator(
-        null,
-        null,
-        txResult.userChannelId,
-        txResult.campaign.youtubeChannelId!,
-      );
+      let verify: { verified: boolean; reason?: string };
+      try {
+        const ytRow = await prisma.youTubeChannel.findUnique({
+          where: { userId: u!.user.id },
+          select: { accessTokenCipher: true, refreshTokenCipher: true, youtubeId: true },
+        });
+        if (ytRow?.accessTokenCipher) {
+          let token = decryptToken(ytRow.accessTokenCipher);
+          if (ytRow.refreshTokenCipher) {
+            try {
+              token = await refreshAccessToken(decryptToken(ytRow.refreshTokenCipher));
+            } catch {
+              token = decryptToken(ytRow.accessTokenCipher);
+            }
+          }
+          verify = await checkSubscriptionViaSubscriberOAuth(token, txResult.campaign.youtubeChannelId!);
+        } else {
+          verify = await checkSubscriptionViaCreator(null, null, txResult.userChannelId, txResult.campaign.youtubeChannelId!);
+        }
+      } catch {
+        verify = await checkSubscriptionViaCreator(null, null, txResult.userChannelId, txResult.campaign.youtubeChannelId!);
+      }
 
       if (!verify.verified) {
         await prisma.taskCompletion.update({
