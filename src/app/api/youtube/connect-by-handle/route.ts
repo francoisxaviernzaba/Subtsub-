@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       if (handle) ch = await getChannelByHandle(handle);
     }
     if (!ch) throw new HttpError(404, "NOT_FOUND", "Channel not found. Enter a public YouTube handle or channel URL.");
+    if (!ch.isPublic) throw new HttpError(400, "PRIVATE_CHANNEL", "This channel is private. Only public channels can be connected.");
 
     const existing = await prisma.youTubeChannel.findUnique({ where: { userId: u.user.id } });
     if (existing && existing.youtubeId !== ch.id) {

@@ -30,9 +30,10 @@ export async function GET(req: NextRequest) {
     // Identify the YouTube channel owned by this Google account
     const { google } = await import("googleapis");
     const yt = google.youtube({ version: "v3", auth: oauth2 });
-    const ch = await yt.channels.list({ part: ["id", "snippet"], mine: true, maxResults: 1 });
+    const ch = await yt.channels.list({ part: ["id", "snippet", "status"], mine: true, maxResults: 1 });
     const item = ch.data.items?.[0];
     if (!item?.id) throw new HttpError(400, "NO_CHANNEL", "No YouTube channel found for this Google account");
+    if (item.status?.privacyStatus === "private") throw new HttpError(400, "PRIVATE_CHANNEL", "Your YouTube channel is private. Only public channels can be connected.");
 
     const ytChannelId = item.id;
     const ytTitle = item.snippet?.title || "YouTube channel";

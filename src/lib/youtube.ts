@@ -53,6 +53,7 @@ export type YTChannel = {
   thumbnailUrl?: string | null;
   subscriberCount?: number | null;
   videoCount?: number | null;
+  isPublic?: boolean;
 };
 
 export type YTVideo = {
@@ -105,7 +106,7 @@ export async function getChannelById(id: string): Promise<YTChannel | null> {
   return cached(`channel:${id}`, 6 * 60 * 60 * 1000, async () => {
     try {
       const res = await yt().channels.list({
-        part: ["snippet", "statistics"],
+        part: ["snippet", "statistics", "status"],
         id: [id],
         maxResults: 1,
       });
@@ -119,6 +120,7 @@ export async function getChannelById(id: string): Promise<YTChannel | null> {
         thumbnailUrl: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url,
         subscriberCount: item.statistics?.subscriberCount ? Number(item.statistics.subscriberCount) : undefined,
         videoCount: item.statistics?.videoCount ? Number(item.statistics.videoCount) : undefined,
+        isPublic: item.status?.privacyStatus !== "private",
       };
     } catch (e) {
       console.error("[youtube] getChannelById failed", e);
@@ -132,7 +134,7 @@ export async function getChannelByHandle(handle: string): Promise<YTChannel | nu
   return cached(`channel:handle:${clean}`, 6 * 60 * 60 * 1000, async () => {
     try {
       const res = await yt().channels.list({
-        part: ["snippet", "statistics"],
+        part: ["snippet", "statistics", "status"],
         forHandle: clean,
         maxResults: 1,
       });
@@ -146,6 +148,7 @@ export async function getChannelByHandle(handle: string): Promise<YTChannel | nu
         thumbnailUrl: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url,
         subscriberCount: item.statistics?.subscriberCount ? Number(item.statistics.subscriberCount) : undefined,
         videoCount: item.statistics?.videoCount ? Number(item.statistics.videoCount) : undefined,
+        isPublic: item.status?.privacyStatus !== "private",
       };
     } catch (e) {
       console.error("[youtube] getChannelByHandle failed", e);

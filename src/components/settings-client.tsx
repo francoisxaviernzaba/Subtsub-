@@ -59,10 +59,10 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
           </div>
         ) : (
           <div className="space-y-3">
-            <div>
-              <div className="font-semibold">Connect your YouTube channel</div>
-              <div className="text-sm text-ink-500">Enter your public YouTube channel handle or URL. Your channel must be public for subscription verification to work.</div>
-            </div>
+          <div>
+            <div className="font-semibold">Connect your YouTube channel</div>
+            <div className="text-sm text-ink-500">Enter any public YouTube channel handle or URL. This can be a channel from any Google account — it does not need to match your S2S login email. Private channels cannot be connected.</div>
+          </div>
             <div className="flex gap-2">
               <input
                 value={handle}
@@ -82,7 +82,7 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
           <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
           <div>
             <div className="font-semibold">Keep your channel public and subscriptions visible</div>
-            <div className="text-xs">Subscription verification requires your channel and subscriptions to be public. If verification fails, visit your <a href="https://www.youtube.com/account_privacy" target="_blank" rel="noopener noreferrer" className="underline">YouTube Privacy Settings</a> and turn off &quot;Keep all my subscriptions private.&quot;</div>
+            <div className="text-xs">The channel you connect can be owned by any Google account — it does not need to match your S2S login. Subscription verification requires the channel and subscriptions to be public. If verification fails, visit your <a href="https://www.youtube.com/account_privacy" target="_blank" rel="noopener noreferrer" className="underline">YouTube Privacy Settings</a> and turn off &quot;Keep all my subscriptions private.&quot;</div>
           </div>
         </div>
       </div>
