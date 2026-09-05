@@ -139,8 +139,9 @@ export async function GET(req: NextRequest) {
       const url = new URL(`/settings?yt=err&msg=${encodeURIComponent(e.message)}`, req.url);
       return NextResponse.redirect(url);
     }
+    const msg = e instanceof Error ? e.message : "Connection failed";
     console.error("[yt callback]", e);
-    const url = new URL(`/settings?yt=err&msg=${encodeURIComponent("Connection failed")}`, req.url);
+    const url = new URL(`/settings?yt=err&msg=${encodeURIComponent(msg)}`, req.url);
     return NextResponse.redirect(url);
   }
 }
