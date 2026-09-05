@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Youtube, AlertTriangle, CheckCircle2, Lock, Bell, User as UserIcon, ExternalLink } from "lucide-react";
+import { Youtube, AlertTriangle, CheckCircle2, Lock, Bell, User as UserIcon, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
 import { formatHandle } from "@/lib/format-handle";
@@ -12,6 +12,82 @@ type YT = { title: string; handle: string | null; thumbnailUrl: string | null; v
 export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: User; youtube: YT; ytStatus?: string; ytMessage?: string }) {
   const router = useRouter();
   const [tab, setTab] = useState<"account" | "notifications" | "security" | "youtube">("account");
+
+  function YouTubePanelInner() {
+    const [handle, setHandle] = useState("");
+    const [busy, setBusy] = useState(false);
+
+    async function connect() {
+      if (!handle.trim()) return;
+      setBusy(true);
+      try {
+        const r = await fetch("/api/youtube/connect-by-handle", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ url: handle.trim() }),
+        });
+        const j = await r.json();
+        if (!r.ok) { toast({ title: "Connection failed", description: j?.error?.message, variant: "error" }); return; }
+        toast({ title: "Channel connected", variant: "success" });
+        router.refresh();
+      } catch {
+        toast({ title: "Connection failed", variant: "error" });
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    return (
+      <div className="card p-5 space-y-4">
+        {ytStatus === "ok" && <div className="p-3 rounded-lg bg-emerald-50 text-emerald-700 text-sm flex items-center gap-2"><CheckCircle2 size={16} /> YouTube channel connected.</div>}
+        {ytStatus === "err" && <div className="p-3 rounded-lg bg-rose-50 text-rose-700 text-sm flex items-center gap-2"><AlertTriangle size={16} /> {ytMessage || "Connection failed"}.</div>}
+
+        {youtube ? (
+          <div className="flex items-center gap-3">
+            <div className="size-14 rounded-full overflow-hidden bg-[rgb(var(--border))]">
+              {youtube.thumbnailUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={youtube.thumbnailUrl} alt="" className="size-full object-cover" />
+              )}
+            </div>
+            <div>
+              <div className="font-semibold">{youtube.title}</div>
+              {formatHandle(youtube.handle) && <div className="text-sm text-ink-500">{formatHandle(youtube.handle)}</div>}
+              <div className="text-[11px] text-ink-500">Connected {new Date(youtube.connectedAt).toLocaleDateString()}</div>
+            </div>
+            <a href={`https://www.youtube.com/channel/${youtube.handle || ""}`} target="_blank" rel="noopener noreferrer" className="ml-auto btn btn-outline"><ExternalLink size={14} /> View</a>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <div className="font-semibold">Connect your YouTube channel</div>
+              <div className="text-sm text-ink-500">Enter your public YouTube channel handle or URL. Your channel must be public for subscription verification to work.</div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                placeholder="@channelname or https://youtube.com/@channelname"
+                className="input flex-1"
+                onKeyDown={(e) => e.key === "Enter" && connect()}
+              />
+              <button onClick={connect} disabled={busy || !handle.trim()} className="btn btn-primary">
+                {busy ? <span className="animate-spin">⟳</span> : <><LinkIcon size={14} /> Connect</>}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="p-3 rounded-xl bg-amber-50 text-amber-800 text-sm flex gap-2">
+          <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+          <div>
+            <div className="font-semibold">Keep your channel public and subscriptions visible</div>
+            <div className="text-xs">Subscription verification requires your channel and subscriptions to be public. If verification fails, visit your <a href="https://www.youtube.com/account_privacy" target="_blank" rel="noopener noreferrer" className="underline">YouTube Privacy Settings</a> and turn off &quot;Keep all my subscriptions private.&quot;</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid md:grid-cols-[200px_1fr] gap-6">
@@ -25,9 +101,7 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
         {tab === "account" && <AccountForm user={user} onSaved={() => router.refresh()} />}
         {tab === "notifications" && <NotificationSettings />}
         {tab === "security" && <SecurityPanel />}
-        {tab === "youtube" && (
-          <YouTubePanel youtube={youtube} status={ytStatus} message={ytMessage} />
-        )}
+        {tab === "youtube" && <YouTubePanelInner />}
       </div>
     </div>
   );
@@ -117,49 +191,6 @@ function SecurityPanel() {
         <li>YouTube channel connection is permanent and cannot be changed to bypass rewards.</li>
         <li>Coin balances are computed server-side from the ledger.</li>
       </ul>
-    </div>
-  );
-}
-
-function YouTubePanel({ youtube, status, message }: { youtube: YT; status?: string; message?: string }) {
-  return (
-    <div className="card p-5 space-y-4">
-      {status === "ok" && <div className="p-3 rounded-lg bg-emerald-50 text-emerald-700 text-sm flex items-center gap-2"><CheckCircle2 size={16} /> YouTube channel connected.</div>}
-      {status === "err" && <div className="p-3 rounded-lg bg-rose-50 text-rose-700 text-sm flex items-center gap-2"><AlertTriangle size={16} /> {message || "Connection failed"}.</div>}
-
-      {youtube ? (
-        <div className="flex items-center gap-3">
-          <div className="size-14 rounded-full overflow-hidden bg-[rgb(var(--border))]">
-            {youtube.thumbnailUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={youtube.thumbnailUrl} alt="" className="size-full object-cover" />
-            )}
-          </div>
-          <div>
-            <div className="font-semibold">{youtube.title}</div>
-            {formatHandle(youtube.handle) && <div className="text-sm text-ink-500">{formatHandle(youtube.handle)}</div>}
-            <div className="text-[11px] text-ink-500">Connected {new Date(youtube.connectedAt).toLocaleDateString()}</div>
-          </div>
-          <a href={`https://www.youtube.com/channel/${youtube.handle || ""}`} target="_blank" rel="noopener noreferrer" className="ml-auto btn btn-outline"><ExternalLink size={14} /> View</a>
-        </div>
-      ) : (
-        <div>
-          <div className="font-semibold">No channel connected</div>
-          <div className="text-sm text-ink-500">Connect a YouTube channel to participate in S2S and to verify your boosts.</div>
-        </div>
-      )}
-
-      <div className="p-3 rounded-xl bg-amber-50 text-amber-800 text-sm flex gap-2">
-        <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
-        <div>
-          <div className="font-semibold">Channel connection is permanent.</div>
-          <div className="text-xs">You can only connect one YouTube channel to your SUB2SUB account, and one SUB2SUB account per channel. The connection cannot be changed to bypass rewards.</div>
-        </div>
-      </div>
-
-      <a href="/api/youtube/connect" className="btn btn-primary w-full">
-        <Youtube size={16} /> {youtube ? "Reconnect" : "Connect YouTube channel"}
-      </a>
     </div>
   );
 }

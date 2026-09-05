@@ -63,9 +63,12 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
 
   async function claimSubscribe() {
     if (!isClaimable || state !== "idle") return;
+    if (!campaign.youtubeChannelId) return;
     setState("verifying");
     setErrMsg(null);
+    window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
     try {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       const r = await fetch("/api/tasks/subscribe/claim", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -162,7 +165,7 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
               disabled={!isClaimable}
               className="btn btn-primary w-full"
             >
-              <Users size={14} /> Subscribe & Earn
+              <Users size={14} /> Subscribe on YouTube → Verify
             </button>
           ) : (
             <button disabled className="btn btn-primary w-full">

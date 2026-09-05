@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleError, HttpError } from "@/lib/api";
-import { checkSubscription } from "@/lib/youtube";
+import { checkSubscriptionViaCreator } from "@/lib/youtube";
 import { decryptToken } from "@/lib/crypto";
 
 type TaskCompletionWithUser = {
@@ -39,21 +39,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       orderBy: { verifiedAt: "desc" },
     });
 
+    const creatorChannel = await prisma.youTubeChannel.findUnique({
+      where: { userId: campaign.ownerId },
+      select: { accessTokenCipher: true, refreshTokenCipher: true },
+    });
+
     const items: any[] = [];
     for (const c of completions as TaskCompletionWithUser[]) {
       let liveVerified: boolean | null = null;
       let liveReason: string | null = null;
-      if (c.state === "VERIFIED" && c.targetChannelId) {
-        const ytChannel = await prisma.youTubeChannel.findUnique({ where: { userId: c.userId } });
-        if (ytChannel?.accessTokenCipher) {
-          try {
-            const accessToken = decryptToken(ytChannel.accessTokenCipher);
-            const result = await checkSubscription(accessToken, c.targetChannelId);
-            liveVerified = result.verified;
-            liveReason = result.reason || null;
-          } catch {
-            liveVerified = null;
-          }
+      if (c.state === "VERIFIED" && c.targetChannelId && creatorChannel?.accessTokenCipher) {
+        try {
+          const accessToken = decryptToken(creatorChannel.accessTokenCipher);
+          const refreshToken = creatorChannel.refreshTokenCipher ? decryptToken(creatorChannel.refreshTokenCipher) : null;
+          const result = await checkSubscriptionViaCreator(accessToken, refreshToken, c.userId, c.targetChannelId);
+          liveVerified = result.verified;
+          liveReason = result.reason || null;
+        } catch {
+          liveVerified = null;
         }
       }
       items.push({

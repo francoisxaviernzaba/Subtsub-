@@ -203,7 +203,7 @@ model TaskCompletion {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   idempotencyKey String? @unique
-
+  failureReason  String?
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 

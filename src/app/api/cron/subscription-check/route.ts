@@ -1,33 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { checkSubscription, getChannelById } from "@/lib/youtube";
+import { checkSubscriptionViaCreator } from "@/lib/youtube";
 import { decryptToken } from "@/lib/crypto";
 import { creditCoins, debitCoins } from "@/lib/coins";
 import { handleError, HttpError } from "@/lib/api";
 
-/**
- * Background subscription re-verification.
- *
- * Runs every 5 minutes via Vercel Cron (or external cron).
- * - Picks up all SUBSCRIBE completions where nextCheckAt <= now AND state = VERIFIED.
- * - Re-checks if the user is still subscribed to the target channel.
- * - If NOT subscribed:
- *     - Marks completion REVOKED
- *     - Reverses the coin credit (debit the user)
- *     - Reverses the campaign budget (decrement spentBudget, completedActions)
- *     - Notifies the user to re-subscribe
- *     - Increments the user's strike count for repeat abuse
- * - If still subscribed:
- *     - Schedules the next check (every 5 minutes up to N times, then once a day for life)
- */
-
-const RE_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const MAX_QUICK_CHECKS = 12; // after 12 quick checks (1 hour), switch to 24h interval
-const MAX_COINS_PER_RUN = 200; // safety cap to avoid runaway processing
+const RE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const MAX_QUICK_CHECKS = 12;
+const MAX_COINS_PER_RUN = 200;
 
 export async function GET(req: NextRequest) {
   try {
-    // Auth: require CRON_SECRET header (Vercel Cron sets this) OR internal call
     const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
@@ -42,7 +25,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Same handler — allows manual POST triggers
   return GET(req);
 }
 
@@ -55,13 +37,11 @@ async function runSubscriptionChecks() {
   let coinsReversed = 0;
   let budgetReversed = 0;
 
-  // Find VERIFIED subscribe completions that are due for a re-check
   const due = await prisma.taskCompletion.findMany({
     where: {
       state: "VERIFIED",
       nextCheckAt: { lte: now },
       targetChannelId: { not: null },
-      // only SUBSCRIBER campaigns
       campaign: { type: "SUBSCRIBER" },
     },
     include: {
@@ -73,7 +53,7 @@ async function runSubscriptionChecks() {
       campaign: true,
     },
     orderBy: { nextCheckAt: "asc" },
-    take: 50, // batch limit per run
+    take: 50,
   });
 
   for (const completion of due) {
@@ -81,18 +61,15 @@ async function runSubscriptionChecks() {
     processed++;
 
     try {
-      // Get the user's stored OAuth token
       const ytChannel = completion.user.youtubeChannel;
       if (!ytChannel || !ytChannel.accessTokenCipher) {
-        // User no longer has a connected channel — revoke
         await revokeCompletion(completion.id, "Channel disconnected", completion.rewardCoins);
         revoked++;
         coinsReversed += completion.rewardCoins;
         continue;
       }
 
-      // Refresh channel stats (subscriber count may have changed)
-      const channel = await getChannelById(ytChannel.youtubeId);
+      const channel = await prisma.youTubeChannel.findUnique({ where: { id: ytChannel.id } });
       if (channel) {
         await prisma.youTubeChannel.update({
           where: { id: ytChannel.id },
@@ -106,11 +83,22 @@ async function runSubscriptionChecks() {
         });
       }
 
-      const accessToken = decryptToken(ytChannel.accessTokenCipher);
-      const verify = await checkSubscription(accessToken, completion.targetChannelId!);
+      const creatorChannel = await prisma.youTubeChannel.findUnique({
+        where: { userId: completion.campaign.ownerId },
+        select: { accessTokenCipher: true, refreshTokenCipher: true },
+      });
+      if (!creatorChannel?.accessTokenCipher) {
+        await revokeCompletion(completion.id, "Creator OAuth missing", completion.rewardCoins);
+        revoked++;
+        coinsReversed += completion.rewardCoins;
+        continue;
+      }
+
+      const accessToken = decryptToken(creatorChannel.accessTokenCipher);
+      const refreshToken = creatorChannel.refreshTokenCipher ? decryptToken(creatorChannel.refreshTokenCipher) : null;
+      const verify = await checkSubscriptionViaCreator(accessToken, refreshToken, completion.userId, completion.targetChannelId!);
 
       if (!verify.verified) {
-        // Subscription was undone — revoke the reward
         await revokeCompletion(
           completion.id,
           `Subscription removed (${verify.reason || "UNSUBSCRIBED"})`,
@@ -122,10 +110,9 @@ async function runSubscriptionChecks() {
         continue;
       }
 
-      // Still subscribed — schedule next check
       const nextInterval = completion.checkCount < MAX_QUICK_CHECKS
         ? RE_CHECK_INTERVAL_MS
-        : 24 * 60 * 60 * 1000; // 24h after the first hour
+        : 24 * 60 * 60 * 1000;
 
       await prisma.taskCompletion.update({
         where: { id: completion.id },
@@ -160,7 +147,6 @@ async function revokeCompletion(completionId: string, reason: string, refundCoin
     });
     if (!c || c.state !== "VERIFIED") return;
 
-    // 1. Mark completion REVOKED
     await tx.taskCompletion.update({
       where: { id: completionId },
       data: {
@@ -170,7 +156,6 @@ async function revokeCompletion(completionId: string, reason: string, refundCoin
       },
     });
 
-    // 2. Reverse the coin credit (debit the user)
     if (refundCoins > 0) {
       await debitCoins({
         userId: c.userId,
@@ -183,7 +168,6 @@ async function revokeCompletion(completionId: string, reason: string, refundCoin
       });
     }
 
-    // 3. Reverse the campaign budget
     if (c.campaign) {
       await tx.campaign.update({
         where: { id: c.campaignId },
@@ -194,7 +178,6 @@ async function revokeCompletion(completionId: string, reason: string, refundCoin
       });
     }
 
-    // 4. Notify the user to re-subscribe
     await tx.notification.create({
       data: {
         userId: c.userId,

@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleError, HttpError, withIdempotency } from "@/lib/api";
 import { rateLimit, getClientKey } from "@/lib/ratelimit";
-import { checkSubscription } from "@/lib/youtube";
+import { checkSubscriptionViaCreator } from "@/lib/youtube";
 import { decryptToken } from "@/lib/crypto";
 import { creditCoins } from "@/lib/coins";
 import { getSettings } from "@/lib/settings";
@@ -25,8 +25,17 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) throw new HttpError(400, "VALIDATION", parsed.error.message);
     const { campaignId, idempotencyKey } = parsed.data;
 
-    return await withIdempotency(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
-      const result = await prisma.$transaction(async (tx) => {
+    type TxResult = {
+      campaign: any;
+      completion: any;
+      userChannelId: string;
+      creatorAccessToken: string;
+      creatorRefreshToken: string | null;
+      creatorTokenExpiresAt: Date | null;
+      reward: number;
+    };
+    const result: TxResult = await withIdempotency<TxResult>(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
+      const txResult = await prisma.$transaction(async (tx) => {
         const campaign = await tx.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) throw new HttpError(404, "NOT_FOUND", "Campaign not found");
         if (campaign.type !== "SUBSCRIBER") throw new HttpError(400, "WRONG_TYPE", "Not a subscriber campaign");
@@ -36,7 +45,6 @@ export async function POST(req: NextRequest) {
         if (campaign.spentBudget >= campaign.totalBudget) throw new HttpError(400, "EXHAUSTED", "Campaign budget exhausted");
         if (campaign.completedActions >= campaign.maxActions) throw new HttpError(400, "FULL", "Campaign is full");
 
-        // dedupe: (user, targetChannel)
         const existing = await tx.taskCompletion.findFirst({
           where: { userId: u!.user.id, targetChannelId: campaign.youtubeChannelId },
         });
@@ -45,16 +53,18 @@ export async function POST(req: NextRequest) {
           if (existing.state === "PENDING") throw new HttpError(409, "PENDING", "Verification already in progress");
         }
 
-        // require YT connection
         const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
-        if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first");
-        if (!myChannel.accessTokenCipher) throw new HttpError(400, "NO_SCOPE", "Subscribe tasks require Google OAuth. Connect via OAuth at /settings#youtube (Google sign-in) to enable subscription verification.");
+        if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
 
-        // Atomic: reserve budget + create PENDING completion
+        const creatorChannel = await tx.youTubeChannel.findUnique({
+          where: { userId: campaign.ownerId },
+          select: { id: true, youtubeId: true, accessTokenCipher: true, refreshTokenCipher: true, tokenExpiresAt: true },
+        });
+        if (!creatorChannel?.accessTokenCipher) throw new HttpError(400, "CREATOR_NO_OAUTH", "Campaign owner has not connected OAuth. Verification unavailable.");
+
         const settings = await getSettings();
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
 
-        // Create PENDING record first with next check scheduled
         const completion = await tx.taskCompletion.create({
           data: {
             userId: u!.user.id,
@@ -62,40 +72,47 @@ export async function POST(req: NextRequest) {
             targetChannelId: campaign.youtubeChannelId,
             state: "PENDING",
             rewardCoins: reward,
-            // Schedule first re-verification 5 minutes from now
             nextCheckAt: new Date(Date.now() + 5 * 60 * 1000),
             idempotencyKey: idempotencyKey ?? null,
           },
         });
 
-        return { campaign, completion, accessToken: decryptToken(myChannel.accessTokenCipher) };
+        return {
+          campaign,
+          completion,
+          userChannelId: myChannel.youtubeId,
+          creatorAccessToken: decryptToken(creatorChannel.accessTokenCipher),
+          creatorRefreshToken: creatorChannel.refreshTokenCipher ? decryptToken(creatorChannel.refreshTokenCipher) : null,
+          creatorTokenExpiresAt: creatorChannel.tokenExpiresAt,
+          reward,
+        };
       });
 
-      // Now verify with YouTube (outside tx to avoid holding connection)
-      const verify = await checkSubscription(result.accessToken, result.campaign.youtubeChannelId!);
+      const verify = await checkSubscriptionViaCreator(
+        result.creatorAccessToken,
+        result.creatorRefreshToken,
+        result.userChannelId,
+        result.campaign.youtubeChannelId!,
+      );
 
       if (!verify.verified) {
         await prisma.taskCompletion.update({
           where: { id: result.completion.id },
-          data: { state: "FAILED" },
+          data: { state: "FAILED", failureReason: verify.reason || "NOT_SUBSCRIBED" },
         });
-        const msg =
-          verify.reason === "NOT_SUBSCRIBED" ? "We could not detect your subscription. Please subscribe on YouTube first." :
-          verify.reason === "NO_SCOPE" ? "Reconnect your YouTube channel to grant permission to verify subscriptions." :
-          "Verification unavailable. Please try again later.";
+        const msg = verify.reason === "PRIVATE"
+          ? "We can't find your subscription! Ensure your channel isn't private. Visit your YouTube Privacy Settings and turn off 'Keep all my subscriptions private', then verify again."
+          : verify.reason === "NOT_SUBSCRIBED"
+          ? "We could not detect your subscription. Please subscribe on YouTube first, then verify."
+          : "Verification unavailable. Please try again later.";
         throw new HttpError(400, verify.reason || "UNVERIFIED", msg);
       }
 
-      // Credit coins + mark verified + reserve budget (all atomic)
-      const settings = await getSettings();
-      const reward = Math.min(result.campaign.rewardPerAction, settings.maxRewardPerAction);
-
       const finalState = await prisma.$transaction(async (tx) => {
-        // Re-check campaign budget under tx
         const c = await tx.campaign.findUnique({ where: { id: result.campaign.id } });
         if (!c) throw new HttpError(404, "NOT_FOUND", "Campaign not found");
+        const reward = result.reward;
         if (c.spentBudget + reward > c.totalBudget) {
-          // mark completion FAILED
           await tx.taskCompletion.update({ where: { id: result.completion.id }, data: { state: "FAILED" } });
           throw new HttpError(400, "EXHAUSTED", "Campaign budget exhausted");
         }
@@ -111,7 +128,6 @@ export async function POST(req: NextRequest) {
           where: { id: result.completion.id },
           data: { state: "VERIFIED", verifiedAt: new Date() },
         });
-        // Credit coins
         const credit = await creditCoins({
           userId: u!.user.id,
           amount: reward,
@@ -123,23 +139,20 @@ export async function POST(req: NextRequest) {
         return { credit, completionId: result.completion.id };
       });
 
-      // Notification (best-effort)
       await prisma.notification.create({
         data: {
           userId: u!.user.id,
           kind: "SUBSCRIPTION_VERIFIED",
-          title: `+${reward} coins`,
+          title: `+${result.reward} coins`,
           body: `Subscription verified.`,
           link: "/transactions",
         },
       }).catch(() => {});
 
-      // Gamification
       await addXp(u!.user.id, 25, "subscribe");
       await updateDailyStreak(u!.user.id);
       await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
 
-      // Check if budget exhausted for notification
       const after = await prisma.campaign.findUnique({ where: { id: result.campaign.id } });
       if (after && after.spentBudget >= after.totalBudget) {
         await prisma.notification.create({
@@ -153,8 +166,10 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
       }
 
-      return { ok: true, reward, balance: finalState.credit.balance };
-    }).then((res) => NextResponse.json(res));
+      return { ok: true, reward: result.reward, balance: finalState.credit.balance };
+    });
+
+    return NextResponse.json(result);
   } catch (e) {
     return handleError(e);
   }

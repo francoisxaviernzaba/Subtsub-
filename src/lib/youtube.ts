@@ -10,7 +10,6 @@ export const YT_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/youtube.readonly",
-  "https://www.googleapis.com/auth/youtube.force-ssl",
 ];
 
 export function makeOAuth2Client() {
@@ -197,41 +196,45 @@ function parseISO8601Duration(d: string): number {
 }
 
 /**
- * Check whether the user is subscribed to `targetChannelId` via their stored OAuth token.
- * Uses youtube.subscriptions.list (requires youtube.force-ssl scope).
+ * Check whether the user is subscribed to `targetChannelId` via the creator's subscriber list.
+ * Uses youtube.readonly scope and paginates through creator's subscriptions.
  */
-export async function checkSubscription(
+export async function checkSubscriptionViaCreator(
   accessToken: string,
+  refreshToken: string | null,
+  userChannelId: string,
   targetChannelId: string,
 ): Promise<{ verified: boolean; reason?: string }> {
   if (!accessToken) return { verified: false, reason: "NO_SCOPE" };
   try {
     const auth = new google.auth.OAuth2();
-    auth.setCredentials({ access_token: accessToken });
+    auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
     const ytAuth = google.youtube({ version: "v3", auth });
     let pageToken: string | undefined = undefined;
+    let scanned = 0;
     do {
-      // googleapis infers circular self-types here; use a loose shape
-      const res: { data: { items?: Array<{ snippet?: { resourceId?: { channelId?: string | null } } }>; nextPageToken?: string | null } } = await ytAuth.subscriptions.list({
+      const res: any = await ytAuth.subscriptions.list({
         part: ["snippet"],
         mine: true,
         maxResults: 50,
         pageToken,
       });
-      const items = res.data.items ?? [];
+      const items = (res.data as any).items ?? [];
       for (const sub of items) {
-        if (sub.snippet?.resourceId?.channelId === targetChannelId) {
+        scanned++;
+        if ((sub as any).snippet?.resourceId?.channelId === userChannelId) {
           return { verified: true };
         }
       }
-      pageToken = res.data.nextPageToken ?? undefined;
+      pageToken = (res.data as any).nextPageToken ?? undefined;
+      if (scanned >= 5000) break;
     } while (pageToken);
     return { verified: false, reason: "NOT_SUBSCRIBED" };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[youtube] checkSubscription failed", msg);
+    console.error("[youtube] checkSubscriptionViaCreator failed", msg);
     if (msg.includes("insufficient") || msg.includes("scope")) return { verified: false, reason: "NO_SCOPE" };
-    if (msg.includes("401") || msg.includes("invalid")) return { verified: false, reason: "NO_SCOPE" };
+    if (msg.includes("private") || msg.includes("privacy")) return { verified: false, reason: "PRIVATE" };
     return { verified: false, reason: "API_ERROR" };
   }
 }
