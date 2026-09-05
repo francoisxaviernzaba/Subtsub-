@@ -53,6 +53,9 @@ export async function POST(req: NextRequest) {
         if (existing) {
           if (existing.state === "VERIFIED") throw new HttpError(409, "DUPLICATE", "You already subscribed to this channel");
           if (existing.state === "PENDING") throw new HttpError(409, "PENDING", "Verification already in progress");
+          if (existing.state === "FAILED" || existing.state === "REVERSED") {
+            await tx.taskCompletion.delete({ where: { id: existing.id } });
+          }
         }
 
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
