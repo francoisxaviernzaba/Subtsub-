@@ -8,7 +8,7 @@ import { toast } from "./toast";
 import { formatCoins, formatNumber, timeAgo } from "@/lib/utils";
 import { formatHandle } from "@/lib/format-handle";
 
-type YT = { id: string; title: string; handle: string | null; thumbnailUrl: string | null } | null;
+type YT = { id: string; youtubeId: string; title: string; handle: string | null; thumbnailUrl: string | null } | null;
 type Campaign = {
   id: string; type: "VIDEO_VIEW" | "SUBSCRIBER"; status: string; title: string;
   rewardPerAction: number; totalBudget: number; spentBudget: number; maxActions: number; completedActions: number;
@@ -242,8 +242,8 @@ function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; 
   const reward = settings.subscribeRewardCoins;
   const budget = subs * reward;
 
-  const preview = youtube?.id
-    ? { id: youtube.id, title: youtube.title, thumbnail: youtube.thumbnailUrl ?? "", handle: youtube.handle }
+  const preview = youtube?.youtubeId
+    ? { id: youtube.youtubeId, title: youtube.title, thumbnail: youtube.thumbnailUrl ?? "", handle: youtube.handle }
     : null;
 
   async function submit() {
