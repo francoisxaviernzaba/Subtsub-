@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
     };
     const claimResult = await withIdempotency<ClaimResult>(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
       const settings = await getSettings();
+      const myChannel = await prisma.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
+      if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
+
       const txResult: TxResult = await prisma.$transaction(async (tx) => {
         const campaign = await tx.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) throw new HttpError(404, "NOT_FOUND", "Campaign not found");
@@ -51,9 +54,6 @@ export async function POST(req: NextRequest) {
           if (existing.state === "VERIFIED") throw new HttpError(409, "DUPLICATE", "You already subscribed to this channel");
           if (existing.state === "PENDING") throw new HttpError(409, "PENDING", "Verification already in progress");
         }
-
-      const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
-      if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
 
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
 
@@ -77,27 +77,29 @@ export async function POST(req: NextRequest) {
         };
       });
 
+      if (!myChannel.accessTokenCipher) {
+        await prisma.taskCompletion.update({
+          where: { id: txResult.completion.id },
+          data: { state: "FAILED", failureReason: "NO_OAUTH" },
+        });
+        throw new HttpError(400, "NO_OAUTH", "Connect your YouTube channel via Google OAuth in Settings to verify subscriptions");
+      }
+
       let verify: { verified: boolean; reason?: string };
       try {
-        const ytRow = await prisma.youTubeChannel.findUnique({
-          where: { userId: u!.user.id },
-          select: { accessTokenCipher: true, refreshTokenCipher: true, youtubeId: true },
-        });
-        if (ytRow?.accessTokenCipher) {
-          let token = decryptToken(ytRow.accessTokenCipher);
-          if (ytRow.refreshTokenCipher) {
-            try {
-              token = await refreshAccessToken(decryptToken(ytRow.refreshTokenCipher));
-            } catch {
-              token = decryptToken(ytRow.accessTokenCipher);
-            }
+        let token = decryptToken(myChannel.accessTokenCipher);
+        if (myChannel.refreshTokenCipher) {
+          try {
+            token = await refreshAccessToken(decryptToken(myChannel.refreshTokenCipher));
+          } catch {
+            token = decryptToken(myChannel.accessTokenCipher);
           }
-          verify = await checkSubscriptionViaSubscriberOAuth(token, txResult.campaign.youtubeChannelId!);
-        } else {
-          verify = await checkSubscriptionViaCreator(null, null, txResult.userChannelId, txResult.campaign.youtubeChannelId!);
         }
-      } catch {
-        verify = await checkSubscriptionViaCreator(null, null, txResult.userChannelId, txResult.campaign.youtubeChannelId!);
+        verify = await checkSubscriptionViaSubscriberOAuth(token, txResult.campaign.youtubeChannelId!);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[subscribe] OAuth verification failed", msg);
+        verify = { verified: false, reason: "OAUTH_VERIFICATION_FAILED" };
       }
 
       if (!verify.verified) {
@@ -105,10 +107,12 @@ export async function POST(req: NextRequest) {
           where: { id: txResult.completion.id },
           data: { state: "FAILED", failureReason: verify.reason || "NOT_SUBSCRIBED" },
         });
-        const msg = verify.reason === "PRIVATE"
+        const msg = verify.reason === "NOT_SUBSCRIBED"
+          ? "You are not subscribed to this channel. Please subscribe on YouTube first."
+          : verify.reason === "PRIVATE"
           ? "We can't find your subscription! Ensure your channel isn't private. Visit your YouTube Privacy Settings and turn off 'Keep all my subscriptions private', then verify again."
-          : verify.reason === "NOT_SUBSCRIBED"
-          ? "We could not detect your subscription. Please subscribe on YouTube first, then verify."
+          : verify.reason === "OAUTH_VERIFICATION_FAILED"
+          ? "Subscription verification failed. Please reconnect your YouTube channel in Settings and try again."
           : "Verification unavailable. Please try again later.";
         throw new HttpError(400, verify.reason || "UNVERIFIED", msg);
       }
