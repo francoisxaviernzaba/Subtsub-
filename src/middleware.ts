@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Middleware route protection — public paths bypass auth check
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/api/auth", "/api/youtube/callback", "/_next", "/favicon.ico", "/robots.txt", "/sitemap.xml"];
 const PUBLIC_API = ["/api/auth", "/api/payments/buymeacoffee/webhook"];
 
