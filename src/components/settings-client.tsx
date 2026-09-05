@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { formatHandle } from "@/lib/format-handle";
 
 type User = { name: string; email: string; username: string };
-type YT = { title: string; handle: string | null; thumbnailUrl: string | null; verified: boolean; connectedAt: string } | null;
+type YT = { id: string; title: string; handle: string | null; thumbnailUrl: string | null; verified: boolean; connectedAt: string } | null;
 
 export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: User; youtube: YT; ytStatus?: string; ytMessage?: string }) {
   const router = useRouter();

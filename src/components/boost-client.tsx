@@ -239,49 +239,21 @@ function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; 
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Reward per sub is fixed by admin (settings.subscribeRewardCoins)
   const reward = settings.subscribeRewardCoins;
   const budget = subs * reward;
 
-  // The connected channel is auto-selected — no paste needed.
-  // (We trust the verified channel from `youtube` rather than re-fetching.)
-  const preview = youtube
-    ? { id: youtube.id === "" ? "" : (youtube as { id: string }).id, title: youtube.title, thumbnail: youtube.thumbnailUrl ?? "", handle: youtube.handle }
+  const preview = youtube?.id
+    ? { id: youtube.id, title: youtube.title, thumbnail: youtube.thumbnailUrl ?? "", handle: youtube.handle }
     : null;
-  // The connected channel id is available in `youtube`; we keep the YouTubeChannel model
-  // ID internally distinct from the youtubeId, so we need to pass youtubeId instead.
-  // To keep the API simple, we use a dedicated preview from a hidden fetch.
-  const [resolved, setResolved] = useState<{ id: string; title: string; thumbnail: string; handle: string | null } | null>(null);
-
-  useEffect(() => {
-    if (!youtube) {
-      setResolved(null);
-      return;
-    }
-    // Fetch the youtubeId (YouTube channel ID) for the connected channel from settings
-    let alive = true;
-    fetch("/api/youtube/lookup-channel", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url: youtube.handle ? `@${youtube.handle}` : youtube.title }),
-    })
-      .then((r) => r.json())
-      .then((j) => {
-        if (!alive) return;
-        if (j?.channel) setResolved(j.channel);
-      })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, [youtube]);
 
   async function submit() {
-    if (!resolved) return;
+    if (!preview) return;
     setSubmitting(true); setErr(null);
     try {
       const r = await fetch("/api/campaigns/subscriber", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ targetChannelId: resolved.id, targetSubscribers: subs }),
+        body: JSON.stringify({ targetChannelId: preview.id, targetSubscribers: subs }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -299,7 +271,7 @@ function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; 
     }
   }
 
-  const valid = subs >= 1 && subs <= 100000 && budget >= settings.minBudget && budget <= settings.maxBudget && budget <= balance && resolved;
+  const valid = !!preview && subs >= 1 && subs <= 100000 && budget >= settings.minBudget && budget <= settings.maxBudget && budget <= balance;
 
   return (
     <div className="space-y-4">
@@ -307,15 +279,15 @@ function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; 
       <div>
         <label className="text-sm font-medium">Target channel</label>
         <div className="mt-1 card p-3 flex gap-3 items-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200">
-          {resolved?.thumbnail ? (
+          {preview?.thumbnail ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={resolved.thumbnail} alt="" className="size-12 rounded-full" />
+            <img src={preview.thumbnail} alt="" className="size-12 rounded-full" />
           ) : (
             <div className="size-12 rounded-full bg-[rgb(var(--border))] animate-pulse" />
           )}
           <div className="min-w-0 flex-1">
-            <div className="font-semibold truncate">{resolved?.title || youtube?.title || "Your channel"}</div>
-            <div className="text-xs text-ink-500">{formatHandle(resolved?.handle || youtube?.handle) || ""}</div>
+            <div className="font-semibold truncate">{preview?.title || youtube?.title || "Your channel"}</div>
+            <div className="text-xs text-ink-500">{formatHandle(preview?.handle || youtube?.handle) || ""}</div>
           </div>
           <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
             <CheckCircle2 size={12} /> Connected

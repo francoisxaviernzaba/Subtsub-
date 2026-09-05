@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
-import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift, Flame, Trophy, MessageSquare } from "lucide-react";
+import { Bell, Coins, Search, LogOut, Settings as SettingsIcon, User as UserIcon, Youtube, Shield, Gift, Flame, Trophy, MessageSquare, Repeat } from "lucide-react";
 import { formatCoins } from "@/lib/utils";
 import { formatHandle } from "@/lib/format-handle";
 import { ThemeToggle } from "./theme-toggle";
@@ -16,15 +16,32 @@ type YT = { id: string; title: string; handle: string | null; thumbnailUrl: stri
 export function Header({ user, balance, youtube, xp, dailyStreak }: { user: User; balance: number; youtube: YT; xp: number; dailyStreak: number }) {
   const [openMenu, setOpenMenu] = useState(false);
   const [openNotif, setOpenNotif] = useState(false);
+  const [openSwitch, setOpenSwitch] = useState(false);
+  const [accounts, setAccounts] = useState<{ id: string; email: string; name: string | null; image: string | null }[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
+  const switchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
       if (!menuRef.current?.contains(e.target as Node)) setOpenMenu(false);
+      if (!switchRef.current?.contains(e.target as Node)) setOpenSwitch(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
+
+  async function loadAccounts() {
+    try {
+      const r = await fetch("/api/account/available");
+      const j = await r.json();
+      if (r.ok) setAccounts(j.accounts || []);
+    } catch {}
+  }
+
+  async function switchTo(accountId: string) {
+    await fetch("/api/account/switch", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId: accountId }) });
+    window.location.href = `/login?switchTo=${accountId}`;
+  }
 
   return (
     <header className="sticky top-2 sm:top-3 z-40 px-3 sm:px-5">
@@ -71,6 +88,40 @@ export function Header({ user, balance, youtube, xp, dailyStreak }: { user: User
           {openNotif && <NotificationsPopover onClose={() => setOpenNotif(false)} />}
 
           <ThemeToggle />
+
+          <div className="relative" ref={switchRef}>
+            <button
+              onClick={() => { setOpenSwitch((v) => !v); loadAccounts(); }}
+              className="size-9 grid place-items-center rounded-full hover:bg-white/60 dark:hover:bg-white/10"
+              aria-label="Switch account"
+            >
+              <Repeat size={18} />
+            </button>
+            {openSwitch && (
+              <div
+                className="absolute right-0 mt-2 w-72 rounded-2xl border border-white/40 dark:border-white/10 p-1.5 shadow-2xl shadow-black/10 backdrop-blur-xl bg-white/90 dark:bg-gray-950/80 animate-fade-in"
+                style={{ WebkitBackdropFilter: "blur(20px) saturate(180%)" }}
+              >
+                <div className="px-3 py-2 text-xs font-medium text-ink-500">Switch account (max 2 per device)</div>
+                {accounts.length === 0 && <div className="px-3 py-2 text-xs text-ink-500">No other accounts on this device.</div>}
+                {accounts.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => switchTo(a.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/60 text-sm"
+                  >
+                    <div className="size-8 rounded-full overflow-hidden bg-[rgb(var(--border))]">
+                      {a.image && <img src={a.image} alt="" className="size-full object-cover" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate">{a.name || "User"}</div>
+                      <div className="text-xs text-ink-500 truncate">{a.email}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <Link href="/quests" className="hidden sm:flex items-center gap-1 text-xs font-semibold text-ink-500 hover:text-brand-600">
             <Flame size={14} /> {dailyStreak > 0 && <span>{dailyStreak}</span>}

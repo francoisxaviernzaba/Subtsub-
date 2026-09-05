@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "./toast";
 import { formatCoins, timeAgo } from "@/lib/utils";
 import { formatHandle } from "@/lib/format-handle";
-import { Coins, Users, Rocket, ShoppingCart, Settings as Cog, Mail, Shield, Trash2, Edit3, Plus, X, MessageSquare, Send } from "lucide-react";
+import { Coins, Users, Rocket, ShoppingCart, Settings as Cog, Mail, Shield, Trash2, Edit3, Plus, X, MessageSquare, Send, Youtube } from "lucide-react";
 
 type Settings = {
   viewRewardCoins: number; minWatchSeconds: number;
@@ -18,17 +18,27 @@ type Settings = {
   welcomeCoins: number;
 };
 type User = { id: string; email: string; name: string | null; role: string; status: string; createdAt: string; updatedAt: string; lastSeenAt: string | null; xp: number; level: number; dailyStreak: number; totalEarned: number; bio: string | null; publicProfile: boolean; yt: { title: string; handle: string | null; thumb: string | null; subscriberCount: number | null; verified: boolean } | null };
-type Campaign = { id: string; ownerEmail: string; type: string; status: string; title: string; spent: number; budget: number; completed: number; max: number; createdAt: string };
+type Campaign = { id: string; ownerId: string; ownerEmail: string; type: string; status: string; title: string; spent: number; budget: number; completed: number; max: number; createdAt: string };
 type Payment = { id: string; userId: string; coins: number; amountCents: number; status: string; createdAt: string };
 type SupportMessage = { id: string; userId: string; subject: string; message: string; status: string; priority: string; createdAt: string; updatedAt: string; resolvedAt: string | null; user: { id: string; name: string | null; email: string; image: string | null }; replies: { id: string; content: string; isAdmin: boolean; createdAt: string; user: { name: string | null; email: string } }[] };
+type Channel = { id: string; userId: string; userEmail: string; youtubeId: string; handle: string | null; title: string; verified: boolean; subscriberCount: number | null; connectedAt: string };
+type Transaction = { id: string; userId: string; userEmail: string; delta: number; type: string; referenceType: string; note: string; createdAt: string };
 
-export function AdminClient({ settings, users, campaigns, payments, totalCoins }: { settings: Settings; users: User[]; campaigns: Campaign[]; payments: Payment[]; totalCoins: number }) {
-  const [tab, setTab] = useState<"overview" | "settings" | "users" | "campaigns" | "coins" | "support">("overview");
+export function AdminClient({ settings, users, campaigns: initialCampaigns, payments, totalCoins }: { settings: Settings; users: User[]; campaigns: Campaign[]; payments: Payment[]; totalCoins: number }) {
+  const [tab, setTab] = useState<"overview" | "settings" | "users" | "campaigns" | "channels" | "coins" | "support">("overview");
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
   const [supportLoading, setSupportLoading] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
+
+  useEffect(() => { setCampaigns(initialCampaigns); }, [initialCampaigns]);
 
   useEffect(() => {
     if (tab === "support") loadSupport();
+    if (tab === "channels") loadChannels();
+    if (tab === "coins") loadTransactions();
   }, [tab]);
 
   async function loadSupport() {
@@ -39,6 +49,24 @@ export function AdminClient({ settings, users, campaigns, payments, totalCoins }
       if (r.ok) setSupportMessages(j.items);
     } catch {}
     setSupportLoading(false);
+  }
+
+  async function loadChannels() {
+    try {
+      const r = await fetch("/api/admin/channels");
+      const j = await r.json();
+      if (r.ok) setChannels(j.channels);
+    } catch {}
+  }
+
+  async function loadTransactions() {
+    setTxLoading(true);
+    try {
+      const r = await fetch("/api/admin/coins/transactions?limit=50");
+      const j = await r.json();
+      if (r.ok) setTransactions(j.transactions);
+    } catch {}
+    setTxLoading(false);
   }
 
   async function replySupport(id: string, message: string) {
@@ -55,6 +83,22 @@ export function AdminClient({ settings, users, campaigns, payments, totalCoins }
     loadSupport();
   }
 
+  async function deleteCampaign(id: string) {
+    if (!confirm("Delete this campaign? This cannot be undone.")) return;
+    const r = await fetch(`/api/admin/campaigns/${id}`, { method: "DELETE" });
+    if (!r.ok) { toast({ title: "Delete failed", variant: "error" }); return; }
+    toast({ title: "Campaign deleted", variant: "success" });
+    setCampaigns(campaigns.filter((c) => c.id !== id));
+  }
+
+  async function deleteChannel(id: string) {
+    if (!confirm("Delete this channel connection?")) return;
+    const r = await fetch("/api/admin/channels", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+    if (!r.ok) { toast({ title: "Delete failed", variant: "error" }); return; }
+    toast({ title: "Channel deleted", variant: "success" });
+    setChannels(channels.filter((c) => c.id !== id));
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -66,15 +110,17 @@ export function AdminClient({ settings, users, campaigns, payments, totalCoins }
         <TabBtn active={tab === "settings"} onClick={() => setTab("settings")}>Settings</TabBtn>
         <TabBtn active={tab === "users"} onClick={() => setTab("users")}>Users ({users.length})</TabBtn>
         <TabBtn active={tab === "campaigns"} onClick={() => setTab("campaigns")}>Campaigns ({campaigns.length})</TabBtn>
+        <TabBtn active={tab === "channels"} onClick={() => setTab("channels")}>Channels</TabBtn>
         <TabBtn active={tab === "support"} onClick={() => setTab("support")}>Support ({supportMessages.length})</TabBtn>
-        <TabBtn active={tab === "coins"} onClick={() => setTab("coins")}>Coin management</TabBtn>
+        <TabBtn active={tab === "coins"} onClick={() => setTab("coins")}>Coins</TabBtn>
       </div>
       {tab === "overview" && <Overview users={users.length} campaigns={campaigns.length} payments={payments.length} totalCoins={totalCoins} />}
       {tab === "settings" && <SettingsForm initial={settings} />}
       {tab === "users" && <UsersManager users={users} />}
-      {tab === "campaigns" && <CampaignsTable campaigns={campaigns} />}
+      {tab === "campaigns" && <CampaignsManager campaigns={campaigns} onDelete={deleteCampaign} />}
+      {tab === "channels" && <ChannelsManager channels={channels} onDelete={deleteChannel} />}
       {tab === "support" && <SupportManager messages={supportMessages} loading={supportLoading} onReply={replySupport} onStatusChange={updateSupportStatus} />}
-      {tab === "coins" && <CoinManager users={users} />}
+      {tab === "coins" && <CoinsPanel users={users} transactions={transactions} loading={txLoading} onRefresh={loadTransactions} />}
     </div>
   );
 }
@@ -298,6 +344,136 @@ function UsersManager({ users }: { users: User[] }) {
   );
 }
 
+function CampaignsManager({ campaigns, onDelete }: { campaigns: Campaign[]; onDelete: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Campaign | null>(null);
+  const [form, setForm] = useState({ ownerId: "", type: "SUBSCRIBER", status: "ACTIVE", title: "", totalBudget: 1000, maxActions: 10, rewardPerAction: 10, youtubeChannelId: "", youtubeVideoId: "", minWatchSeconds: 30 });
+  const [busy, setBusy] = useState(false);
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ ownerId: "", type: "SUBSCRIBER", status: "ACTIVE", title: "", totalBudget: 1000, maxActions: 10, rewardPerAction: 10, youtubeChannelId: "", youtubeVideoId: "", minWatchSeconds: 30 });
+    setOpen(true);
+  }
+
+  function openEdit(c: Campaign) {
+    setEditing(c);
+    setForm({ ownerId: c.ownerId, type: c.type, status: c.status, title: c.title, totalBudget: c.budget, maxActions: c.max, rewardPerAction: c.spent / Math.max(1, c.completed) || 0, youtubeChannelId: "", youtubeVideoId: "", minWatchSeconds: 30 });
+    setOpen(true);
+  }
+
+  async function saveCampaign() {
+    setBusy(true);
+    const isEdit = !!editing;
+    const url = isEdit ? `/api/admin/campaigns/${editing!.id}` : "/api/admin/campaigns";
+    const method = isEdit ? "PATCH" : "POST";
+    const r = await fetch(url, { method, headers: { "content-type": "application/json" }, body: JSON.stringify(form) });
+    setBusy(false);
+    if (!r.ok) { toast({ title: isEdit ? "Update failed" : "Create failed", variant: "error" }); return; }
+    toast({ title: isEdit ? "Campaign updated" : "Campaign created", variant: "success" });
+    setOpen(false);
+    window.location.reload();
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium">{campaigns.length} campaigns</div>
+        <button onClick={openCreate} className="btn btn-primary h-8 px-3 text-xs"><Plus size={14} /> Create campaign</button>
+      </div>
+      <div className="card divide-y divide-[rgb(var(--border))]">
+        {campaigns.map((c) => (
+          <div key={c.id} className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">{c.title}</div>
+                <div className="text-xs text-ink-500">{c.ownerEmail} · {c.type} · {c.status} · {timeAgo(c.createdAt)}</div>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="text-xs">{c.completed}/{c.max} · {c.spent}/{c.budget} 🪙</div>
+                <button onClick={() => openEdit(c)} className="btn btn-outline h-7 px-2 text-xs"><Edit3 size={12} /></button>
+                <button onClick={() => onDelete(c.id)} className="btn btn-outline h-7 px-2 text-xs text-rose-600"><Trash2 size={12} /></button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setOpen(false)}>
+          <div className="card p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">{editing ? "Edit campaign" : "Create campaign"}</div>
+              <button onClick={() => setOpen(false)}><X size={18} /></button>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Owner ID</label>
+              <input value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })} className="input mt-1" disabled={!!editing} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Type</label>
+                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="select mt-1">
+                  <option value="SUBSCRIBER">SUBSCRIBER</option>
+                  <option value="VIDEO_VIEW">VIDEO_VIEW</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Status</label>
+                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="select mt-1">
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="PAUSED">PAUSED</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium">Total budget</label>
+                <input type="number" value={form.totalBudget} onChange={(e) => setForm({ ...form, totalBudget: Number(e.target.value) })} className="input mt-1" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Max actions</label>
+                <input type="number" value={form.maxActions} onChange={(e) => setForm({ ...form, maxActions: Number(e.target.value) })} className="input mt-1" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button disabled={busy} onClick={saveCampaign} className="btn btn-primary flex-1">{busy ? "Saving…" : "Save"}</button>
+              <button onClick={() => setOpen(false)} className="btn btn-outline">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChannelsManager({ channels, onDelete }: { channels: Channel[]; onDelete: (id: string) => void }) {
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-medium">{channels.length} channels</div>
+      <div className="card divide-y divide-[rgb(var(--border))]">
+        {channels.map((c) => (
+          <div key={c.id} className="p-3 flex items-center gap-3">
+            <div className="size-9 rounded-full overflow-hidden bg-[rgb(var(--border))]">
+              <img src={`https://yt3.ggpht.com/ytc/${c.youtubeId}`} alt="" className="size-full object-cover" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold truncate">{c.title}</div>
+              <div className="text-xs text-ink-500">{formatHandle(c.handle) || c.youtubeId} · {c.userEmail} · {c.verified ? "Verified" : "Unverified"} · {timeAgo(c.connectedAt)}</div>
+            </div>
+            <button onClick={() => onDelete(c.id)} className="btn btn-outline h-7 px-2 text-xs text-rose-600"><Trash2 size={12} /></button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SupportManager({ messages, loading, onReply, onStatusChange }: { messages: SupportMessage[]; loading: boolean; onReply: (id: string, message: string) => void; onStatusChange: (id: string, status: string) => void }) {
   const [replyId, setReplyId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -355,78 +531,64 @@ function SupportManager({ messages, loading, onReply, onStatusChange }: { messag
   );
 }
 
-function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
-  const [busyId, setBusyId] = useState<string | null>(null);
-  async function preview(id: string) {
-    setBusyId(id);
-    const r = await fetch("/api/admin/preview-campaign", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ campaignId: id }) });
-    setBusyId(null);
-    if (!r.ok) {
-      const j = await r.json().catch(() => ({}));
-      toast({ title: "Preview failed", description: j?.error?.message, variant: "error" });
-      return;
-    }
-    toast({ title: "Marked as previewed", description: "View-only — no coins credited, no budget counted.", variant: "success" });
-  }
-  return (
-    <div className="card divide-y divide-[rgb(var(--border))]">
-      {campaigns.map((c) => (
-        <div key={c.id} className="p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold truncate">{c.title}</div>
-              <div className="text-xs text-ink-500">{c.ownerEmail} · {c.type} · {c.status}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="text-xs">{c.completed}/{c.max} · {c.spent}/{c.budget} 🪙</div>
-              <button
-                onClick={() => preview(c.id)}
-                disabled={busyId === c.id}
-                className="btn btn-outline h-7 px-2 text-xs"
-                title="Mark as viewed by admin (no reward, no budget counted)"
-              >
-                {busyId === c.id ? "…" : "View"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CoinManager({ users }: { users: User[] }) {
-  const [userId, setUserId] = useState(users[0]?.id || "");
+function CoinsPanel({ users, transactions, loading, onRefresh }: { users: User[]; transactions: Transaction[]; loading: boolean; onRefresh: () => void }) {
+  const [selectedUserId, setSelectedUserId] = useState(users[0]?.id || "");
   const [amount, setAmount] = useState(100);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+
   async function adjust(sign: 1 | -1) {
-    if (!userId) return;
+    if (!selectedUserId) return;
     setBusy(true);
-    const r = await fetch("/api/admin/coins", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId, amount: sign * Math.abs(amount), note }) });
+    const r = await fetch("/api/admin/coins", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId: selectedUserId, amount: sign * Math.abs(amount), note }) });
     setBusy(false);
     if (!r.ok) { toast({ title: "Failed", variant: "error" }); return; }
     toast({ title: `Adjusted ${sign > 0 ? "+" : "-"}${amount}`, variant: "success" });
+    onRefresh();
   }
+
   return (
-    <div className="card p-5 space-y-3">
-      <div>
-        <label className="text-sm font-medium">User</label>
-        <select value={userId} onChange={(e) => setUserId(e.target.value)} className="select mt-1">
-          {users.map((u) => <option key={u.id} value={u.id}>{u.email}</option>)}
-        </select>
+    <div className="space-y-4">
+      <div className="card p-5 space-y-3">
+        <div>
+          <label className="text-sm font-medium">User</label>
+          <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="select mt-1">
+            {users.map((u) => <option key={u.id} value={u.id}>{u.email}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Amount</label>
+          <input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="input mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Note (audit log)</label>
+          <input value={note} onChange={(e) => setNote(e.target.value)} className="input mt-1" />
+        </div>
+        <div className="flex gap-2">
+          <button disabled={busy} onClick={() => adjust(1)} className="btn btn-primary">+ Add</button>
+          <button disabled={busy} onClick={() => adjust(-1)} className="btn btn-outline">- Remove</button>
+        </div>
       </div>
-      <div>
-        <label className="text-sm font-medium">Amount</label>
-        <input type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="input mt-1" />
-      </div>
-      <div>
-        <label className="text-sm font-medium">Note (audit log)</label>
-        <input value={note} onChange={(e) => setNote(e.target.value)} className="input mt-1" />
-      </div>
-      <div className="flex gap-2">
-        <button disabled={busy} onClick={() => adjust(1)} className="btn btn-primary">+ Add</button>
-        <button disabled={busy} onClick={() => adjust(-1)} className="btn btn-outline">- Remove</button>
+      <div className="card p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium">Transaction history</div>
+          <button onClick={onRefresh} className="btn btn-outline h-8 px-2 text-xs">Refresh</button>
+        </div>
+        {loading ? <div className="text-sm text-ink-500">Loading…</div> : null}
+        {!loading && transactions.length === 0 && <div className="text-sm text-ink-500">No transactions.</div>}
+        <div className="card divide-y divide-[rgb(var(--border))]">
+          {transactions.map((t) => (
+            <div key={t.id} className="p-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{t.userEmail}</div>
+                <div className="text-xs text-ink-500">{t.type} · {t.referenceType} · {timeAgo(t.createdAt)}</div>
+              </div>
+              <div className={`text-sm font-semibold ${t.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                {t.delta > 0 ? "+" : ""}{t.delta}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

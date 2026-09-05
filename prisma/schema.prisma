@@ -60,6 +60,7 @@ model User {
 
   supportMessages   SupportMessage[]
   supportReplies    SupportReply[]
+  deviceSessions   DeviceSession[]
 
   @@index([xp])
   @@index([level])
@@ -400,4 +401,18 @@ model SupportReply {
   user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([messageId, createdAt])
+}
+
+model DeviceSession {
+  id         String   @id @default(cuid())
+  ipAddress  String
+  userId     String
+  userAgent  String?
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ipAddress, userId])
+  @@index([ipAddress])
 }

@@ -17,7 +17,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { y
       </div>
       <SettingsClient
         user={{ name: u.user.name || "", email: u.user.email || "", username: dbUser?.username || "" }}
-        youtube={yt ? { title: yt.title, handle: yt.handle, thumbnailUrl: yt.thumbnailUrl, verified: yt.verified, connectedAt: yt.connectedAt.toISOString() } : null}
+        youtube={yt ? { id: yt.youtubeId, title: yt.title, handle: yt.handle, thumbnailUrl: yt.thumbnailUrl, verified: yt.verified, connectedAt: yt.connectedAt.toISOString() } : null}
         ytStatus={searchParams.yt}
         ytMessage={searchParams.msg}
       />
