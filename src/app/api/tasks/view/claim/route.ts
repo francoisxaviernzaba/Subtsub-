@@ -74,16 +74,28 @@ export async function POST(req: NextRequest) {
             idempotencyKey: idempotencyKey ?? null,
           },
         });
+        const netReward = Math.floor(reward * (1 - settings.platformFeePercent / 100));
         const credit = await creditCoins({
           userId: u!.user.id,
-          amount: reward,
+          amount: netReward,
           type: "VIEW_REWARD",
           referenceType: "TaskCompletion",
           referenceId: completion.id,
           note: `View reward for ${c.title}`,
           idempotencyKey: `view.credit.${completion.id}`,
         });
-        return { reward, balance: credit.balance, completionId: completion.id };
+        if (settings.platformFeePercent > 0 && netReward < reward) {
+          await creditCoins({
+            userId: u!.user.id,
+            amount: reward - netReward,
+            type: "PLATFORM_FEE",
+            referenceType: "TaskCompletion",
+            referenceId: completion.id,
+            note: `Platform fee (${settings.platformFeePercent}%) for ${c.title}`,
+            idempotencyKey: `fee.view.${completion.id}`,
+          });
+        }
+        return { reward: netReward, balance: credit.balance, completionId: completion.id };
       });
 
       // notify

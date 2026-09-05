@@ -21,7 +21,8 @@ export type CoinTxnType =
   | "COIN_PURCHASE"
   | "ADMIN_ADJUSTMENT"
   | "REFUND"
-  | "REVERSAL";
+  | "REVERSAL"
+  | "PLATFORM_FEE";
 
 export type CreditInput = {
   userId: string;

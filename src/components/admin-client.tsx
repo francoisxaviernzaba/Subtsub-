@@ -11,6 +11,7 @@ type Settings = {
   subscribeRewardCoins: number;
   minBudget: number; maxBudget: number;
   minRewardPerAction: number; maxRewardPerAction: number;
+  platformFeePercent: number;
   coinPackages: { coins: number; amountCents: number; currency: string }[];
   adminEmails: string[];
   enforceChannelPermanence: boolean;
@@ -170,6 +171,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         <NumField label="Max budget" value={s.maxBudget} onChange={(v) => setS({ ...s, maxBudget: v })} />
         <NumField label="Min reward/action" value={s.minRewardPerAction} onChange={(v) => setS({ ...s, minRewardPerAction: v })} />
         <NumField label="Max reward/action" value={s.maxRewardPerAction} onChange={(v) => setS({ ...s, maxRewardPerAction: v })} />
+        <NumField label="Platform fee (%)" value={s.platformFeePercent} onChange={(v) => setS({ ...s, platformFeePercent: Math.min(100, Math.max(0, v)) })} />
         <NumField label="Welcome coins (new signup)" value={s.welcomeCoins} onChange={(v) => setS({ ...s, welcomeCoins: v })} />
         <NumField label="Invite reward coins" value={s.inviteRewardCoins} onChange={(v) => setS({ ...s, inviteRewardCoins: v })} />
       </div>

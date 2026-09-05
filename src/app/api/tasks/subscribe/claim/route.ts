@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       reward: number;
     };
     const claimResult = await withIdempotency<ClaimResult>(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
+      const settings = await getSettings();
       const txResult: TxResult = await prisma.$transaction(async (tx) => {
         const campaign = await tx.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) throw new HttpError(404, "NOT_FOUND", "Campaign not found");
@@ -53,7 +54,6 @@ export async function POST(req: NextRequest) {
         const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
         if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
 
-        const settings = await getSettings();
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
 
         const completion = await tx.taskCompletion.create({
@@ -116,22 +116,35 @@ export async function POST(req: NextRequest) {
           where: { id: txResult.completion.id },
           data: { state: "VERIFIED", verifiedAt: new Date() },
         });
+        const netReward = Math.floor(reward * (1 - settings.platformFeePercent / 100));
         const credit = await creditCoins({
           userId: u!.user.id,
-          amount: reward,
+          amount: netReward,
           type: "SUBSCRIBE_REWARD",
           referenceType: "TaskCompletion",
           referenceId: txResult.completion.id,
           note: `Subscribe reward for ${txResult.campaign.title}`,
         });
-        return { credit, completionId: txResult.completion.id };
+        if (settings.platformFeePercent > 0 && netReward < reward) {
+          await creditCoins({
+            userId: u!.user.id,
+            amount: reward - netReward,
+            type: "PLATFORM_FEE",
+            referenceType: "TaskCompletion",
+            referenceId: txResult.completion.id,
+            note: `Platform fee (${settings.platformFeePercent}%) for ${txResult.campaign.title}`,
+            idempotencyKey: `fee.sub.${txResult.completion.id}`,
+          });
+        }
+        return { credit, completionId: txResult.completion.id, netReward };
       });
+      const { netReward } = finalState;
 
       await prisma.notification.create({
         data: {
           userId: u!.user.id,
           kind: "SUBSCRIPTION_VERIFIED",
-          title: `+${txResult.reward} coins`,
+          title: `+${netReward} coins`,
           body: `Subscription verified.`,
           link: "/transactions",
         },
@@ -154,7 +167,7 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
       }
 
-      return { ok: true, reward: txResult.reward, balance: finalState.credit.balance };
+      return { ok: true, reward: netReward, balance: finalState.credit.balance };
     });
 
     return NextResponse.json(claimResult);

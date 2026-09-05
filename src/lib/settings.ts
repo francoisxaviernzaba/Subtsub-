@@ -9,6 +9,7 @@ export type Settings = {
   maxBudget: number;
   minRewardPerAction: number;
   maxRewardPerAction: number;
+  platformFeePercent: number;
   coinPackages: { coins: number; amountCents: number; currency: string }[];
   adminEmails: string[];
   enforceChannelPermanence: boolean;
@@ -25,6 +26,7 @@ const DEFAULTS: Settings = {
   maxBudget: 1_000_000,
   minRewardPerAction: 1,
   maxRewardPerAction: 1000,
+  platformFeePercent: 35,
   coinPackages: [
     { coins: 1000, amountCents: 100, currency: "USD" },
     { coins: 2000, amountCents: 200, currency: "USD" },
