@@ -38,19 +38,7 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage, isCreator, 
     }
 
     async function connectOAuth() {
-      setBusy(true);
-      try {
-        const r = await fetch("/api/youtube/connect", { method: "GET" });
-        if (r.ok) {
-          window.location.href = "/api/youtube/connect";
-        } else {
-          toast({ title: "Connection failed", variant: "error" });
-        }
-      } catch {
-        toast({ title: "Connection failed", variant: "error" });
-      } finally {
-        setBusy(false);
-      }
+      window.location.href = "/api/youtube/connect";
     }
 
     return (
