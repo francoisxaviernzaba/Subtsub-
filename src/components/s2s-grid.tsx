@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Coins, Users, ExternalLink, CheckCircle2, Loader2, X } from "lucide-react";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import { toast } from "./toast";
@@ -55,7 +55,8 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
   const remaining = Math.max(0, campaign.maxActions - campaign.completedActions);
   const budgetLeft = Math.max(0, campaign.totalBudget - campaign.spentBudget);
 
-  async function claim() {
+  const doClaim = useCallback(async () => {
+    if (state === "verifying" || state === "done") return;
     setState("verifying");
     setErrMsg(null);
     try {
@@ -79,7 +80,15 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
       setState("error");
       setErrMsg("Network error");
     }
-  }
+  }, [campaign.id, onDone, router, state]);
+
+  useEffect(() => {
+    function onFocus() {
+      if (state === "idle") doClaim();
+    }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [doClaim, state]);
 
   return (
     <div className="card p-4">
@@ -111,7 +120,7 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
         ) : state === "error" ? (
           <>
             <div className="text-xs text-rose-600">{errMsg}</div>
-            <button onClick={claim} className="btn btn-outline w-full">Try again</button>
+            <button onClick={doClaim} className="btn btn-outline w-full">Try again</button>
           </>
         ) : state === "verifying" ? (
           <button disabled className="btn btn-primary w-full">
@@ -127,8 +136,8 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
             >
               <ExternalLink size={14} /> Open & Subscribe on YouTube
             </a>
-            <button onClick={claim} className="btn btn-primary w-full">
-              <Users size={14} /> I&apos;ve subscribed — Verify
+            <button onClick={doClaim} className="btn btn-primary w-full">
+              <Users size={14} /> Verify My Subscription
             </button>
           </>
         )}

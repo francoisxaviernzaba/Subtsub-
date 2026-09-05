@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) throw new HttpError(400, "VALIDATION", parsed.error.message);
     const { campaignId, idempotencyKey } = parsed.data;
 
+    type ClaimResult = { ok: boolean; reward: number; balance: number };
     type TxResult = {
       campaign: any;
       completion: any;
@@ -34,8 +35,8 @@ export async function POST(req: NextRequest) {
       creatorTokenExpiresAt: Date | null;
       reward: number;
     };
-    const result: TxResult = await withIdempotency<TxResult>(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
-      const txResult = await prisma.$transaction(async (tx) => {
+    const claimResult = await withIdempotency<ClaimResult>(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
+      const txResult: TxResult = await prisma.$transaction(async (tx) => {
         const campaign = await tx.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) throw new HttpError(404, "NOT_FOUND", "Campaign not found");
         if (campaign.type !== "SUBSCRIBER") throw new HttpError(400, "WRONG_TYPE", "Not a subscriber campaign");
@@ -89,15 +90,15 @@ export async function POST(req: NextRequest) {
       });
 
       const verify = await checkSubscriptionViaCreator(
-        result.creatorAccessToken,
-        result.creatorRefreshToken,
-        result.userChannelId,
-        result.campaign.youtubeChannelId!,
+        txResult.creatorAccessToken,
+        txResult.creatorRefreshToken,
+        txResult.userChannelId,
+        txResult.campaign.youtubeChannelId!,
       );
 
       if (!verify.verified) {
         await prisma.taskCompletion.update({
-          where: { id: result.completion.id },
+          where: { id: txResult.completion.id },
           data: { state: "FAILED", failureReason: verify.reason || "NOT_SUBSCRIBED" },
         });
         const msg = verify.reason === "PRIVATE"
@@ -109,15 +110,15 @@ export async function POST(req: NextRequest) {
       }
 
       const finalState = await prisma.$transaction(async (tx) => {
-        const c = await tx.campaign.findUnique({ where: { id: result.campaign.id } });
+        const c = await tx.campaign.findUnique({ where: { id: txResult.campaign.id } });
         if (!c) throw new HttpError(404, "NOT_FOUND", "Campaign not found");
-        const reward = result.reward;
+        const reward = txResult.reward;
         if (c.spentBudget + reward > c.totalBudget) {
-          await tx.taskCompletion.update({ where: { id: result.completion.id }, data: { state: "FAILED" } });
+          await tx.taskCompletion.update({ where: { id: txResult.completion.id }, data: { state: "FAILED" } });
           throw new HttpError(400, "EXHAUSTED", "Campaign budget exhausted");
         }
         if (c.completedActions >= c.maxActions) {
-          await tx.taskCompletion.update({ where: { id: result.completion.id }, data: { state: "FAILED" } });
+          await tx.taskCompletion.update({ where: { id: txResult.completion.id }, data: { state: "FAILED" } });
           throw new HttpError(400, "FULL", "Campaign is full");
         }
         await tx.campaign.update({
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
           data: { spentBudget: { increment: reward }, completedActions: { increment: 1 } },
         });
         await tx.taskCompletion.update({
-          where: { id: result.completion.id },
+          where: { id: txResult.completion.id },
           data: { state: "VERIFIED", verifiedAt: new Date() },
         });
         const credit = await creditCoins({
@@ -133,17 +134,17 @@ export async function POST(req: NextRequest) {
           amount: reward,
           type: "SUBSCRIBE_REWARD",
           referenceType: "TaskCompletion",
-          referenceId: result.completion.id,
-          note: `Subscribe reward for ${result.campaign.title}`,
+          referenceId: txResult.completion.id,
+          note: `Subscribe reward for ${txResult.campaign.title}`,
         });
-        return { credit, completionId: result.completion.id };
+        return { credit, completionId: txResult.completion.id };
       });
 
       await prisma.notification.create({
         data: {
           userId: u!.user.id,
           kind: "SUBSCRIPTION_VERIFIED",
-          title: `+${result.reward} coins`,
+          title: `+${txResult.reward} coins`,
           body: `Subscription verified.`,
           link: "/transactions",
         },
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
       await updateDailyStreak(u!.user.id);
       await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
 
-      const after = await prisma.campaign.findUnique({ where: { id: result.campaign.id } });
+      const after = await prisma.campaign.findUnique({ where: { id: txResult.campaign.id } });
       if (after && after.spentBudget >= after.totalBudget) {
         await prisma.notification.create({
           data: {
@@ -166,10 +167,10 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
       }
 
-      return { ok: true, reward: result.reward, balance: finalState.credit.balance };
+      return { ok: true, reward: txResult.reward, balance: finalState.credit.balance };
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(claimResult);
   } catch (e) {
     return handleError(e);
   }
