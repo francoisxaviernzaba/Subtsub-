@@ -3,7 +3,6 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseJson, handleError, HttpError } from "@/lib/api";
-import { getChannelById } from "@/lib/youtube";
 import { getSettings } from "@/lib/settings";
 import { debitCoins } from "@/lib/coins";
 import { rateLimit, getClientKey } from "@/lib/ratelimit";
@@ -21,28 +20,22 @@ export async function POST(req: NextRequest) {
     const body = await parseJson(req, Body);
     const settings = await getSettings();
 
-    // Reward per sub is fixed by admin
     const reward = settings.subscribeRewardCoins;
     if (reward < settings.minRewardPerAction || reward > settings.maxRewardPerAction) {
       throw new HttpError(500, "BAD_REWARD", `Server reward config invalid: ${settings.minRewardPerAction}-${settings.maxRewardPerAction}`);
     }
 
-    const ch = await getChannelById(body.targetChannelId);
-    if (!ch) throw new HttpError(404, "NOT_FOUND", "Target channel not found via YouTube API");
-
-    // ownership: the connected user must own the target channel
     const myCh = await prisma.youTubeChannel.findUnique({ where: { userId: u.user.id } });
     if (!myCh) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first");
-    if (myCh.youtubeId !== ch.id) {
+    if (myCh.youtubeId !== body.targetChannelId) {
       throw new HttpError(403, "NOT_OWNER", "Target channel must be your connected YouTube channel");
     }
 
-    // Anti-cheat: prevent duplicate active/paused campaigns for the same channel by the same owner
     const existing = await prisma.campaign.findFirst({
       where: {
         ownerId: u.user.id,
         type: "SUBSCRIBER",
-        youtubeChannelId: ch.id,
+        youtubeChannelId: body.targetChannelId,
         status: { in: ["ACTIVE", "PAUSED", "PENDING_REVIEW", "DRAFT"] },
       },
       select: { id: true, status: true },
@@ -65,17 +58,17 @@ export async function POST(req: NextRequest) {
         amount: totalBudget,
         type: "BOOST_SPEND",
         referenceType: "Campaign",
-        note: `Boost S2S: ${ch.title} (${body.targetSubscribers} subs)`,
-        idempotencyKey: `boost.sub.${u!.user.id}.${ch.id}.${totalBudget}`,
+        note: `Boost S2S: ${myCh.title} (${body.targetSubscribers} subs)`,
+        idempotencyKey: `boost.sub.${u!.user.id}.${myCh.youtubeId}.${totalBudget}`,
       });
       const camp = await tx.campaign.create({
         data: {
           ownerId: u!.user.id,
           type: "SUBSCRIBER",
           status: "ACTIVE",
-          youtubeChannelId: ch.id,
-          title: `@${ch.handle || ch.title}`.slice(0, 200),
-          thumbnailUrl: ch.thumbnailUrl ?? null,
+          youtubeChannelId: myCh.youtubeId,
+          title: `@${myCh.handle || myCh.title}`.slice(0, 200),
+          thumbnailUrl: myCh.thumbnailUrl ?? null,
           rewardPerAction: reward,
           totalBudget,
           spentBudget: 0,
@@ -87,7 +80,7 @@ export async function POST(req: NextRequest) {
     });
 
     await prisma.notification.create({
-      data: { userId: u.user.id, kind: "CAMPAIGN_ACTIVATED", title: "S2S campaign live", body: ch.title, link: "/boost" },
+      data: { userId: u.user.id, kind: "CAMPAIGN_ACTIVATED", title: "S2S campaign live", body: myCh.title, link: "/boost" },
     }).catch(() => {});
 
     return NextResponse.json({ ok: true, campaignId: result.camp.id, balance: result.balance, totalCost: totalBudget, rewardPerSub: reward });
