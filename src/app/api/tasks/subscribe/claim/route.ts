@@ -171,9 +171,11 @@ export async function POST(req: NextRequest) {
         },
       }).catch(() => {});
 
-      await addXp(u!.user.id, 25, "subscribe");
-      await updateDailyStreak(u!.user.id);
-      await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
+      try {
+        await addXp(u!.user.id, 25, "subscribe");
+        await updateDailyStreak(u!.user.id);
+        await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
+      } catch {}
 
       const after = await prisma.campaign.findUnique({ where: { id: txResult.campaign.id } });
       if (after && after.spentBudget >= after.totalBudget) {
