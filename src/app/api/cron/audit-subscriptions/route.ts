@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkSubscriptionViaCreator } from "@/lib/youtube";
-import { decryptToken } from "@/lib/crypto";
 import { creditCoins } from "@/lib/coins";
 
 export async function GET(req: NextRequest) {
@@ -21,7 +20,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         campaign: { select: { ownerId: true, youtubeChannelId: true, title: true } },
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, youtubeChannel: { select: { youtubeId: true } } } },
       },
       take: 500,
     });
@@ -31,19 +30,16 @@ export async function GET(req: NextRequest) {
     for (const comp of completions) {
       results.checked++;
       try {
-        const creatorChannel = await prisma.youTubeChannel.findUnique({
-          where: { userId: comp.campaign.ownerId },
-          select: { accessTokenCipher: true, refreshTokenCipher: true },
-        });
-        if (!creatorChannel?.accessTokenCipher) {
+        const userYoutubeId = comp.user.youtubeChannel?.youtubeId;
+        if (!userYoutubeId) {
           results.errors++;
           continue;
         }
 
         const verify = await checkSubscriptionViaCreator(
-          decryptToken(creatorChannel.accessTokenCipher),
-          creatorChannel.refreshTokenCipher ? decryptToken(creatorChannel.refreshTokenCipher) : null,
-          comp.userId,
+          null,
+          null,
+          userYoutubeId,
           comp.targetChannelId!,
         );
 
@@ -51,7 +47,7 @@ export async function GET(req: NextRequest) {
           await prisma.$transaction(async (tx) => {
             await tx.taskCompletion.update({
               where: { id: comp.id },
-              data: { state: "FAILED", failureReason: "AUDIT_UNSUBSCRIBED" },
+              data: { state: "FAILED", failureReason: "AUDIT_VERIFICATION_FAILED" },
             });
             await tx.campaign.update({
               where: { id: comp.campaignId },
@@ -63,7 +59,7 @@ export async function GET(req: NextRequest) {
               type: "REVERSAL",
               referenceType: "TaskCompletion",
               referenceId: comp.id,
-              note: `Nightly audit reversal: unsubscribed from ${comp.campaign.title}`,
+              note: `Nightly audit reversal: ${verify.reason || "verification failed"} for ${comp.campaign.title}`,
               idempotencyKey: `audit.reversal.${comp.id}`,
             });
           });

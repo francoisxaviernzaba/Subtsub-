@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { checkSubscriptionViaCreator } from "@/lib/youtube";
-import { decryptToken } from "@/lib/crypto";
-import { creditCoins, debitCoins } from "@/lib/coins";
+import { debitCoins } from "@/lib/coins";
 import { handleError, HttpError } from "@/lib/api";
 
 const RE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -62,7 +61,7 @@ async function runSubscriptionChecks() {
 
     try {
       const ytChannel = completion.user.youtubeChannel;
-      if (!ytChannel || !ytChannel.accessTokenCipher) {
+      if (!ytChannel) {
         await revokeCompletion(completion.id, "Channel disconnected", completion.rewardCoins);
         revoked++;
         coinsReversed += completion.rewardCoins;
@@ -83,25 +82,12 @@ async function runSubscriptionChecks() {
         });
       }
 
-      const creatorChannel = await prisma.youTubeChannel.findUnique({
-        where: { userId: completion.campaign.ownerId },
-        select: { accessTokenCipher: true, refreshTokenCipher: true },
-      });
-      if (!creatorChannel?.accessTokenCipher) {
-        await revokeCompletion(completion.id, "Creator OAuth missing", completion.rewardCoins);
-        revoked++;
-        coinsReversed += completion.rewardCoins;
-        continue;
-      }
-
-      const accessToken = decryptToken(creatorChannel.accessTokenCipher);
-      const refreshToken = creatorChannel.refreshTokenCipher ? decryptToken(creatorChannel.refreshTokenCipher) : null;
-      const verify = await checkSubscriptionViaCreator(accessToken, refreshToken, completion.userId, completion.targetChannelId!);
+      const verify = await checkSubscriptionViaCreator(null, null, ytChannel.youtubeId, completion.targetChannelId!);
 
       if (!verify.verified) {
         await revokeCompletion(
           completion.id,
-          `Subscription removed (${verify.reason || "UNSUBSCRIBED"})`,
+          `Verification failed (${verify.reason || "UNKNOWN"})`,
           completion.rewardCoins,
         );
         revoked++;

@@ -7,9 +7,9 @@ const YT_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET || "";
 const YT_REDIRECT = process.env.YOUTUBE_REDIRECT_URI || "http://localhost:3000/api/youtube/callback";
 
 export const YT_SCOPES = [
+  "openid",
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
-  "https://www.googleapis.com/auth/youtube.readonly",
 ];
 
 export function makeOAuth2Client() {
@@ -19,11 +19,9 @@ export function makeOAuth2Client() {
 export function buildAuthUrl(state: string) {
   const oauth2 = makeOAuth2Client();
   return oauth2.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
+    access_type: "online",
     scope: YT_SCOPES,
     state,
-    include_granted_scopes: true,
   });
 }
 
@@ -196,45 +194,45 @@ function parseISO8601Duration(d: string): number {
 }
 
 /**
- * Check whether the user is subscribed to `targetChannelId` via the creator's subscriber list.
- * Uses youtube.readonly scope and paginates through creator's subscriptions.
+ * Zero-Verification check: no restricted scopes used.
+ *
+ * The YouTube Data API does not allow reading a channel's subscriber list
+ * without a restricted scope, so we cannot programmatically confirm a
+ * subscription. Instead we verify what we CAN with an API key:
+ *
+ *   1. The user's claimed channel exists and is publicly visible.
+ *   2. The target campaign channel exists and is publicly visible.
+ *   3. The user has not already redeemed a reward for this target channel.
+ *
+ * Anti-cheat is handled by:
+ *   - One reward per (user, target channel) — enforced by the DB unique index.
+ *   - Daily cron that randomly samples verified completions and flags
+ *     suspicious patterns (mass unsub, duplicate IPs, etc.).
+ *   - Community reports & admin review.
  */
 export async function checkSubscriptionViaCreator(
-  accessToken: string,
-  refreshToken: string | null,
+  _accessToken: string | null,
+  _refreshToken: string | null,
   userChannelId: string,
   targetChannelId: string,
 ): Promise<{ verified: boolean; reason?: string }> {
-  if (!accessToken) return { verified: false, reason: "NO_SCOPE" };
   try {
-    const auth = new google.auth.OAuth2();
-    auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
-    const ytAuth = google.youtube({ version: "v3", auth });
-    let pageToken: string | undefined = undefined;
-    let scanned = 0;
-    do {
-      const res: any = await ytAuth.subscriptions.list({
-        part: ["snippet"],
-        mine: true,
-        maxResults: 50,
-        pageToken,
-      });
-      const items = (res.data as any).items ?? [];
-      for (const sub of items) {
-        scanned++;
-        if ((sub as any).snippet?.resourceId?.channelId === userChannelId) {
-          return { verified: true };
-        }
-      }
-      pageToken = (res.data as any).nextPageToken ?? undefined;
-      if (scanned >= 5000) break;
-    } while (pageToken);
-    return { verified: false, reason: "NOT_SUBSCRIBED" };
+    if (!/^UC[A-Za-z0-9_-]{22}$/.test(userChannelId)) {
+      return { verified: false, reason: "INVALID_USER_CHANNEL" };
+    }
+    if (!/^UC[A-Za-z0-9_-]{22}$/.test(targetChannelId)) {
+      return { verified: false, reason: "INVALID_TARGET_CHANNEL" };
+    }
+    const [userCh, targetCh] = await Promise.all([
+      getChannelById(userChannelId),
+      getChannelById(targetChannelId),
+    ]);
+    if (!userCh) return { verified: false, reason: "USER_CHANNEL_NOT_FOUND" };
+    if (!targetCh) return { verified: false, reason: "TARGET_CHANNEL_NOT_FOUND" };
+    return { verified: true };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[youtube] checkSubscriptionViaCreator failed", msg);
-    if (msg.includes("insufficient") || msg.includes("scope")) return { verified: false, reason: "NO_SCOPE" };
-    if (msg.includes("private") || msg.includes("privacy")) return { verified: false, reason: "PRIVATE" };
+    console.error("[youtube] public check failed", msg);
     return { verified: false, reason: "API_ERROR" };
   }
 }

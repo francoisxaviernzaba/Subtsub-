@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db";
 import { handleError, HttpError, withIdempotency } from "@/lib/api";
 import { rateLimit, getClientKey } from "@/lib/ratelimit";
 import { checkSubscriptionViaCreator } from "@/lib/youtube";
-import { decryptToken } from "@/lib/crypto";
 import { creditCoins } from "@/lib/coins";
 import { getSettings } from "@/lib/settings";
 import { addXp, updateDailyStreak, incrementDailyQuest } from "@/lib/gamification";
@@ -30,9 +29,6 @@ export async function POST(req: NextRequest) {
       campaign: any;
       completion: any;
       userChannelId: string;
-      creatorAccessToken: string;
-      creatorRefreshToken: string | null;
-      creatorTokenExpiresAt: Date | null;
       reward: number;
     };
     const claimResult = await withIdempotency<ClaimResult>(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
@@ -57,12 +53,6 @@ export async function POST(req: NextRequest) {
         const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
         if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
 
-        const creatorChannel = await tx.youTubeChannel.findUnique({
-          where: { userId: campaign.ownerId },
-          select: { id: true, youtubeId: true, accessTokenCipher: true, refreshTokenCipher: true, tokenExpiresAt: true },
-        });
-        if (!creatorChannel?.accessTokenCipher) throw new HttpError(400, "CREATOR_NO_OAUTH", "Campaign owner has not connected OAuth. Verification unavailable.");
-
         const settings = await getSettings();
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
 
@@ -82,16 +72,13 @@ export async function POST(req: NextRequest) {
           campaign,
           completion,
           userChannelId: myChannel.youtubeId,
-          creatorAccessToken: decryptToken(creatorChannel.accessTokenCipher),
-          creatorRefreshToken: creatorChannel.refreshTokenCipher ? decryptToken(creatorChannel.refreshTokenCipher) : null,
-          creatorTokenExpiresAt: creatorChannel.tokenExpiresAt,
           reward,
         };
       });
 
       const verify = await checkSubscriptionViaCreator(
-        txResult.creatorAccessToken,
-        txResult.creatorRefreshToken,
+        null,
+        null,
         txResult.userChannelId,
         txResult.campaign.youtubeChannelId!,
       );

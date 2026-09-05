@@ -9,7 +9,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: { y
   if (!u?.user?.id) return null;
   const yt = await prisma.youTubeChannel.findUnique({ where: { userId: u.user.id } });
   const dbUser = await prisma.user.findUnique({ where: { id: u.user.id } });
-  const campaignCount = await prisma.campaign.count({ where: { ownerId: u.user.id, type: "SUBSCRIBER" } });
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
@@ -21,8 +20,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: { y
         youtube={yt ? { title: yt.title, handle: yt.handle, thumbnailUrl: yt.thumbnailUrl, verified: yt.verified, connectedAt: yt.connectedAt.toISOString() } : null}
         ytStatus={searchParams.yt}
         ytMessage={searchParams.msg}
-        isCreator={campaignCount > 0}
-        hasOAuth={!!yt?.accessTokenCipher}
       />
     </div>
   );

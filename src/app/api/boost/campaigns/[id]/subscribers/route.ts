@@ -3,12 +3,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleError, HttpError } from "@/lib/api";
 import { checkSubscriptionViaCreator } from "@/lib/youtube";
-import { decryptToken } from "@/lib/crypto";
 
 type TaskCompletionWithUser = {
   id: string;
   userId: string;
-  user: { id: string; email: string; name: string | null; image: string | null };
+  user: { id: string; email: string; name: string | null; image: string | null; youtubeChannel: { youtubeId: string } | null };
   state: string;
   rewardCoins: number;
   verifiedAt: Date | null;
@@ -34,25 +33,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const completions = await prisma.taskCompletion.findMany({
       where: { campaignId: params.id, state: { in: ["VERIFIED", "PENDING", "REVOKED", "FAILED"] } },
       include: {
-        user: { select: { id: true, email: true, name: true, image: true } },
+        user: { select: { id: true, email: true, name: true, image: true, youtubeChannel: { select: { youtubeId: true } } } },
       },
       orderBy: { verifiedAt: "desc" },
-    });
-
-    const creatorChannel = await prisma.youTubeChannel.findUnique({
-      where: { userId: campaign.ownerId },
-      select: { accessTokenCipher: true, refreshTokenCipher: true },
     });
 
     const items: any[] = [];
     for (const c of completions as TaskCompletionWithUser[]) {
       let liveVerified: boolean | null = null;
       let liveReason: string | null = null;
-      if (c.state === "VERIFIED" && c.targetChannelId && creatorChannel?.accessTokenCipher) {
+      if (c.state === "VERIFIED" && c.targetChannelId && c.user.youtubeChannel?.youtubeId) {
         try {
-          const accessToken = decryptToken(creatorChannel.accessTokenCipher);
-          const refreshToken = creatorChannel.refreshTokenCipher ? decryptToken(creatorChannel.refreshTokenCipher) : null;
-          const result = await checkSubscriptionViaCreator(accessToken, refreshToken, c.userId, c.targetChannelId);
+          const result = await checkSubscriptionViaCreator(null, null, c.user.youtubeChannel.youtubeId, c.targetChannelId);
           liveVerified = result.verified;
           liveReason = result.reason || null;
         } catch {

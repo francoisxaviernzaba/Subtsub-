@@ -9,7 +9,7 @@ import { formatHandle } from "@/lib/format-handle";
 type User = { name: string; email: string; username: string };
 type YT = { title: string; handle: string | null; thumbnailUrl: string | null; verified: boolean; connectedAt: string } | null;
 
-export function SettingsClient({ user, youtube, ytStatus, ytMessage, isCreator, hasOAuth }: { user: User; youtube: YT; ytStatus?: string; ytMessage?: string; isCreator?: boolean; hasOAuth?: boolean }) {
+export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: User; youtube: YT; ytStatus?: string; ytMessage?: string }) {
   const router = useRouter();
   const [tab, setTab] = useState<"account" | "notifications" | "security" | "youtube">("account");
 
@@ -37,10 +37,6 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage, isCreator, 
       }
     }
 
-    async function connectOAuth() {
-      window.location.href = "/api/youtube/connect";
-    }
-
     return (
       <div className="card p-5 space-y-4">
         {ytStatus === "ok" && <div className="p-3 rounded-lg bg-emerald-50 text-emerald-700 text-sm flex items-center gap-2"><CheckCircle2 size={16} /> YouTube channel connected.</div>}
@@ -58,11 +54,6 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage, isCreator, 
               <div className="font-semibold">{youtube.title}</div>
               {formatHandle(youtube.handle) && <div className="text-sm text-ink-500">{formatHandle(youtube.handle)}</div>}
               <div className="text-[11px] text-ink-500">Connected {new Date(youtube.connectedAt).toLocaleDateString()}</div>
-              {isCreator && (
-                <div className="text-[11px] text-ink-500">
-                  {hasOAuth ? "✅ Creator OAuth connected — subscriber verification active" : "⚠️ Creator OAuth required for subscriber verification"}
-                </div>
-              )}
             </div>
             <a href={`https://www.youtube.com/channel/${youtube.handle || ""}`} target="_blank" rel="noopener noreferrer" className="ml-auto btn btn-outline"><ExternalLink size={14} /> View</a>
           </div>
@@ -83,20 +74,6 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage, isCreator, 
               <button onClick={connectHandle} disabled={busy || !handle.trim()} className="btn btn-primary">
                 {busy ? <span className="animate-spin">⟳</span> : <><LinkIcon size={14} /> Connect</>}
               </button>
-            </div>
-          </div>
-        )}
-
-        {isCreator && (
-          <div className="p-3 rounded-xl bg-blue-50 text-blue-800 text-sm flex gap-2">
-            <div>
-              <div className="font-semibold">Creator Verification Access</div>
-              <div className="text-xs">To verify subscriber campaigns, you must connect your YouTube channel with OAuth. This allows the platform to check your subscriber list. Your credentials are encrypted and never shared.</div>
-              {!hasOAuth && (
-                <button onClick={connectOAuth} disabled={busy} className="btn btn-primary mt-2">
-                  <LinkIcon size={14} /> Connect YouTube with OAuth
-                </button>
-              )}
             </div>
           </div>
         )}
