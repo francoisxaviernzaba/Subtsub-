@@ -161,15 +161,17 @@ export async function POST(req: NextRequest) {
       });
       const { netReward } = finalState;
 
-      await prisma.notification.create({
-        data: {
-          userId: u!.user.id,
-          kind: "SUBSCRIPTION_VERIFIED",
-          title: `+${netReward} coins`,
-          body: `Subscription verified.`,
-          link: "/transactions",
-        },
-      }).catch(() => {});
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: u!.user.id,
+            kind: "SUBSCRIPTION_VERIFIED",
+            title: `+${netReward} coins`,
+            body: `Subscription verified.`,
+            link: "/transactions",
+          },
+        }).catch(() => {});
+      } catch {}
 
       try {
         await addXp(u!.user.id, 25, "subscribe");
@@ -177,18 +179,20 @@ export async function POST(req: NextRequest) {
         await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
       } catch {}
 
-      const after = await prisma.campaign.findUnique({ where: { id: txResult.campaign.id } });
-      if (after && after.spentBudget >= after.totalBudget) {
-        await prisma.notification.create({
-          data: {
-            userId: after.ownerId,
-            kind: "BUDGET_EXHAUSTED",
-            title: "Campaign budget exhausted",
-            body: after.title,
-            link: "/boost",
-          },
-        }).catch(() => {});
-      }
+      try {
+        const after = await prisma.campaign.findUnique({ where: { id: txResult.campaign.id } });
+        if (after && after.spentBudget >= after.totalBudget) {
+          await prisma.notification.create({
+            data: {
+              userId: after.ownerId,
+              kind: "BUDGET_EXHAUSTED",
+              title: "Campaign budget exhausted",
+              body: after.title,
+              link: "/boost",
+            },
+          }).catch(() => {});
+        }
+      } catch {}
 
       return { ok: true, reward: netReward, balance: finalState.credit.balance };
     });
