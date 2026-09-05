@@ -9,7 +9,7 @@ import { formatHandle } from "@/lib/format-handle";
 type User = { name: string; email: string; username: string };
 type YT = { title: string; handle: string | null; thumbnailUrl: string | null; verified: boolean; connectedAt: string } | null;
 
-export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: User; youtube: YT; ytStatus?: string; ytMessage?: string }) {
+export function SettingsClient({ user, youtube, ytStatus, ytMessage, isCreator, hasOAuth }: { user: User; youtube: YT; ytStatus?: string; ytMessage?: string; isCreator?: boolean; hasOAuth?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<"account" | "notifications" | "security" | "youtube">("account");
 
@@ -17,7 +17,7 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
     const [handle, setHandle] = useState("");
     const [busy, setBusy] = useState(false);
 
-    async function connect() {
+    async function connectHandle() {
       if (!handle.trim()) return;
       setBusy(true);
       try {
@@ -30,6 +30,22 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
         if (!r.ok) { toast({ title: "Connection failed", description: j?.error?.message, variant: "error" }); return; }
         toast({ title: "Channel connected", variant: "success" });
         router.refresh();
+      } catch {
+        toast({ title: "Connection failed", variant: "error" });
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function connectOAuth() {
+      setBusy(true);
+      try {
+        const r = await fetch("/api/youtube/connect", { method: "GET" });
+        if (r.ok) {
+          window.location.href = "/api/youtube/connect";
+        } else {
+          toast({ title: "Connection failed", variant: "error" });
+        }
       } catch {
         toast({ title: "Connection failed", variant: "error" });
       } finally {
@@ -54,6 +70,11 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
               <div className="font-semibold">{youtube.title}</div>
               {formatHandle(youtube.handle) && <div className="text-sm text-ink-500">{formatHandle(youtube.handle)}</div>}
               <div className="text-[11px] text-ink-500">Connected {new Date(youtube.connectedAt).toLocaleDateString()}</div>
+              {isCreator && (
+                <div className="text-[11px] text-ink-500">
+                  {hasOAuth ? "✅ Creator OAuth connected — subscriber verification active" : "⚠️ Creator OAuth required for subscriber verification"}
+                </div>
+              )}
             </div>
             <a href={`https://www.youtube.com/channel/${youtube.handle || ""}`} target="_blank" rel="noopener noreferrer" className="ml-auto btn btn-outline"><ExternalLink size={14} /> View</a>
           </div>
@@ -69,11 +90,25 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
                 onChange={(e) => setHandle(e.target.value)}
                 placeholder="@channelname or https://youtube.com/@channelname"
                 className="input flex-1"
-                onKeyDown={(e) => e.key === "Enter" && connect()}
+                onKeyDown={(e) => e.key === "Enter" && connectHandle()}
               />
-              <button onClick={connect} disabled={busy || !handle.trim()} className="btn btn-primary">
+              <button onClick={connectHandle} disabled={busy || !handle.trim()} className="btn btn-primary">
                 {busy ? <span className="animate-spin">⟳</span> : <><LinkIcon size={14} /> Connect</>}
               </button>
+            </div>
+          </div>
+        )}
+
+        {isCreator && (
+          <div className="p-3 rounded-xl bg-blue-50 text-blue-800 text-sm flex gap-2">
+            <div>
+              <div className="font-semibold">Creator Verification Access</div>
+              <div className="text-xs">To verify subscriber campaigns, you must connect your YouTube channel with OAuth. This allows the platform to check your subscriber list. Your credentials are encrypted and never shared.</div>
+              {!hasOAuth && (
+                <button onClick={connectOAuth} disabled={busy} className="btn btn-primary mt-2">
+                  <LinkIcon size={14} /> Connect YouTube with OAuth
+                </button>
+              )}
             </div>
           </div>
         )}
