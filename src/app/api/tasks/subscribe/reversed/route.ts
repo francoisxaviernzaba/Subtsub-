@@ -44,8 +44,19 @@ export async function GET(req: NextRequest) {
         if (myChannel.refreshTokenCipher) {
           try {
             token = await refreshAccessToken(decryptToken(myChannel.refreshTokenCipher));
-          } catch {
-            token = decryptToken(myChannel.accessTokenCipher);
+          } catch (refreshErr) {
+            const refreshMsg = refreshErr instanceof Error ? refreshErr.message : String(refreshErr);
+            console.error("[reversed] token refresh failed", refreshMsg);
+            authErrors.push({
+              id: completion.id,
+              campaignId: completion.campaign.id,
+              title: completion.campaign.title,
+              channelId: completion.campaign.youtubeChannelId,
+              thumbnailUrl: completion.campaign.thumbnailUrl,
+              rewardCoins: completion.rewardCoins,
+              failureReason: "OAUTH_VERIFICATION_FAILED",
+            });
+            continue;
           }
         }
         const result = await checkSubscriptionViaSubscriberOAuth(token, completion.targetChannelId!);

@@ -103,14 +103,22 @@ export async function POST(req: NextRequest) {
         if (myChannel.refreshTokenCipher) {
           try {
             token = await refreshAccessToken(decryptToken(myChannel.refreshTokenCipher));
-          } catch {
-            token = decryptToken(myChannel.accessTokenCipher);
+          } catch (refreshErr) {
+            const refreshMsg = refreshErr instanceof Error ? refreshErr.message : String(refreshErr);
+            console.error("[subscribe] token refresh failed", refreshMsg);
+            await prisma.taskCompletion.update({
+              where: { id: txResult.completion.id },
+              data: { state: "FAILED", failureReason: "OAUTH_VERIFICATION_FAILED" },
+            });
+            const msg = "Your YouTube connection is invalid or expired. Please reconnect your channel in Settings and try again.";
+            throw new HttpError(400, "OAUTH_VERIFICATION_FAILED", msg);
           }
         }
         verify = await checkSubscriptionViaSubscriberOAuth(token, txResult.campaign.youtubeChannelId!);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.error("[subscribe] OAuth verification failed", msg);
+        if (msg.includes("OAUTH_VERIFICATION_FAILED")) throw e;
         verify = { verified: false, reason: "OAUTH_VERIFICATION_FAILED" };
       }
 
