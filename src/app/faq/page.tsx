@@ -49,11 +49,11 @@ const faqs = [
   },
   {
     question: "Is there a mobile app?",
-    answer: "SUB2SUB is a web app that works perfectly on mobile browsers. Simply visit subtsub.vercel.app from your phone. No download required.",
+    answer: "SUB2SUB is a web app that works perfectly on mobile browsers. Simply visit sub2sub.com from your phone. No download required.",
   },
   {
     question: "How do I contact support?",
-    answer: "You can reach us through the app's settings page or email us at support@subtsub.vercel.app. We typically respond within 24 hours.",
+    answer: "You can reach us through the app's settings page or email us at support@sub2sub.com. We typically respond within 24 hours.",
   },
 ];
 
