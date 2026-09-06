@@ -136,7 +136,7 @@ async function revokeCompletion(completionId: string, reason: string, refundCoin
     await tx.taskCompletion.update({
       where: { id: completionId },
       data: {
-        state: "REVOKED",
+        state: "REVERSED",
         revokedAt: new Date(),
         revokeReason: reason,
       },
@@ -167,7 +167,7 @@ async function revokeCompletion(completionId: string, reason: string, refundCoin
     await tx.notification.create({
       data: {
         userId: c.userId,
-        kind: "SUBSCRIPTION_REVOKED",
+        kind: "SUBSCRIPTION_REVERSED",
         title: "Subscription no longer detected",
         body: `You unsubscribed from a boosted channel. ${refundCoins} coins were reversed from your balance. Please re-subscribe on YouTube and verify again.`,
         link: "/s2s",
