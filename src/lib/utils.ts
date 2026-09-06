@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCoins(n: number): string {
-  return new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(n)));
+  return new Intl.NumberFormat("en-US").format(Math.floor(n));
 }
 
 export function formatNumber(n: number | null | undefined): string {
