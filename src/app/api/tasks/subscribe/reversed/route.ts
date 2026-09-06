@@ -36,6 +36,8 @@ export async function GET(req: NextRequest) {
     });
 
     const reversed: any[] = [];
+    const authErrors: any[] = [];
+
     for (const completion of verified) {
       try {
         let token = decryptToken(myChannel.accessTokenCipher);
@@ -48,42 +50,54 @@ export async function GET(req: NextRequest) {
         }
         const result = await checkSubscriptionViaSubscriberOAuth(token, completion.targetChannelId!);
         if (!result.verified) {
-          await prisma.$transaction(async (tx) => {
-            await tx.taskCompletion.update({
-              where: { id: completion.id },
-              data: { state: "REVERSED", failureReason: result.reason || "NOT_SUBSCRIBED" },
+          if (result.reason === "NOT_SUBSCRIBED") {
+            await prisma.$transaction(async (tx) => {
+              await tx.taskCompletion.update({
+                where: { id: completion.id },
+                data: { state: "REVERSED", failureReason: result.reason || "NOT_SUBSCRIBED" },
+              });
+              await debitCoins({
+                userId: u.user.id,
+                amount: completion.rewardCoins,
+                type: "REVERSAL",
+                referenceType: "TaskCompletion",
+                referenceId: completion.id,
+                note: `Real-time reversal: ${result.reason || "not subscribed"} for ${completion.campaign.title}`,
+                idempotencyKey: `realtime.reversal.${completion.id}`,
+              });
+              await tx.campaign.update({
+                where: { id: completion.campaignId },
+                data: { spentBudget: { decrement: completion.rewardCoins }, completedActions: { decrement: 1 } },
+              });
             });
-            await debitCoins({
-              userId: u.user.id,
-              amount: completion.rewardCoins,
-              type: "REVERSAL",
-              referenceType: "TaskCompletion",
-              referenceId: completion.id,
-              note: `Real-time reversal: ${result.reason || "not subscribed"} for ${completion.campaign.title}`,
-              idempotencyKey: `realtime.reversal.${completion.id}`,
+            reversed.push({
+              id: completion.id,
+              campaignId: completion.campaign.id,
+              title: completion.campaign.title,
+              channelId: completion.campaign.youtubeChannelId,
+              thumbnailUrl: completion.campaign.thumbnailUrl,
+              rewardCoins: completion.rewardCoins,
+              failureReason: result.reason || "NOT_SUBSCRIBED",
+              revokedAt: new Date().toISOString(),
             });
-            await tx.campaign.update({
-              where: { id: completion.campaignId },
-              data: { spentBudget: { decrement: completion.rewardCoins }, completedActions: { decrement: 1 } },
+          } else if (result.reason?.startsWith("API_ERROR_")) {
+            authErrors.push({
+              id: completion.id,
+              campaignId: completion.campaign.id,
+              title: completion.campaign.title,
+              channelId: completion.campaign.youtubeChannelId,
+              thumbnailUrl: completion.campaign.thumbnailUrl,
+              rewardCoins: completion.rewardCoins,
+              failureReason: result.reason,
             });
-          });
-          reversed.push({
-            id: completion.id,
-            campaignId: completion.campaign.id,
-            title: completion.campaign.title,
-            channelId: completion.campaign.youtubeChannelId,
-            thumbnailUrl: completion.campaign.thumbnailUrl,
-            rewardCoins: completion.rewardCoins,
-            failureReason: result.reason || "NOT_SUBSCRIBED",
-            revokedAt: new Date().toISOString(),
-          });
+          }
         }
       } catch {
         // skip failed checks
       }
     }
 
-    return NextResponse.json({ ok: true, items: reversed });
+    return NextResponse.json({ ok: true, items: reversed, authErrors });
   } catch (e) {
     return handleError(e);
   }

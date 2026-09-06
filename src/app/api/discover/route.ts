@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     // VIDEO_VIEW campaigns + SUBSCRIBER campaigns: filter eligible + exclude user's own
     // and for subscribers exclude channels the user already completed.
     const completedSubs = await prisma.taskCompletion.findMany({
-      where: { userId: user.user.id, state: { in: ["VERIFIED", "PENDING", "REVERSED"] }, targetChannelId: { not: null } },
+      where: { userId: user.user.id, state: { in: ["VERIFIED", "PENDING"] }, targetChannelId: { not: null } },
       select: { targetChannelId: true, state: true },
     });
     const completedChannelIds = new Set(completedSubs.map((c) => c.targetChannelId!).filter(Boolean));
