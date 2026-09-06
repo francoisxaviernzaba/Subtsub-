@@ -7,3 +7,4 @@
     { "path": "/api/cron/subscription-check", "schedule": "*/5 * * * *" }
   ]
 }
+ 
