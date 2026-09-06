@@ -29,8 +29,12 @@ export async function parseJson<T>(req: Request, schema: ZodSchema<T>): Promise<
 export async function withIdempotency<T>(userId: string, endpoint: string, key: string | null, fn: () => Promise<T>): Promise<T> {
   if (!key) return fn();
   const existing = await prisma.idempotencyKey.findUnique({ where: { key } });
-  if (existing) {
-    return existing.result ? (JSON.parse(existing.result) as T) : (undefined as unknown as T);
+  if (existing?.result) {
+    try {
+      return JSON.parse(existing.result) as T;
+    } catch {
+      // corrupt result; fall through and recompute
+    }
   }
   try {
     const result = await fn();
@@ -39,7 +43,6 @@ export async function withIdempotency<T>(userId: string, endpoint: string, key: 
     });
     return result;
   } catch (e) {
-    // don't store failed attempts; allow retry
     throw e;
   }
 }
