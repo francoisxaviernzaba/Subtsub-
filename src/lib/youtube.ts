@@ -271,7 +271,7 @@ export async function checkSubscriptionViaSubscriberOAuth(
     const data = await resp.json();
     if (Array.isArray(data.items) && data.items.length > 0) {
       const sub = data.items[0];
-      const subChannelId = sub?.snippet?.channelId || sub?.snippet?.resourceId?.channelId;
+      const subChannelId = sub?.snippet?.resourceId?.channelId;
       if (subChannelId && subChannelId === targetChannelId) {
         return { verified: true };
       }
