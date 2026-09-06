@@ -10,7 +10,7 @@ const alternatives = [
   {
     name: "SUB2SUB",
     description: "The safest sub4sub alternative with real YouTube API verification. Earn coins by watching videos and subscribing, then boost your own channel.",
-    url: "https://subtsub.vercel.app",
+    url: "https://sub2sub.com",
     pros: ["Real YouTube API verification", "Coin-based economy", "Gamification and rewards", "No password required"],
   },
   {
