@@ -256,7 +256,7 @@ export async function checkSubscriptionViaSubscriberOAuth(
     const url = new URL("https://www.googleapis.com/youtube/v3/subscriptions");
     url.searchParams.set("mine", "true");
     url.searchParams.set("forChannelId", targetChannelId);
-    url.searchParams.set("part", "id");
+    url.searchParams.set("part", "id,snippet");
     url.searchParams.set("maxResults", "1");
 
     const resp = await fetch(url.toString(), {
@@ -270,7 +270,12 @@ export async function checkSubscriptionViaSubscriberOAuth(
 
     const data = await resp.json();
     if (Array.isArray(data.items) && data.items.length > 0) {
-      return { verified: true };
+      const sub = data.items[0];
+      const subChannelId = sub?.snippet?.channelId || sub?.snippet?.resourceId?.channelId;
+      if (subChannelId && subChannelId === targetChannelId) {
+        return { verified: true };
+      }
+      return { verified: false, reason: "NOT_SUBSCRIBED" };
     }
     return { verified: false, reason: "NOT_SUBSCRIBED" };
   } catch (e: unknown) {
