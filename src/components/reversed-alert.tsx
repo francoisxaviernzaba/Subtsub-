@@ -19,25 +19,25 @@ export function ReversedAlert({ onResubscribe }: { onResubscribe?: () => void })
   const [items, setItems] = useState<ReversedItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/tasks/subscribe/reversed", { cache: "no-store" });
-        if (!res.ok) throw new Error("failed");
-        const data = await res.json();
-        if (!cancelled) {
-          setItems(data.items || []);
-          setOpen(data.items.length > 0);
-        }
-      } catch {
-        // ignore
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  async function load() {
+    try {
+      const res = await fetch("/api/tasks/subscribe/reversed", { cache: "no-store" });
+      if (!res.ok) throw new Error("failed");
+      const data = await res.json();
+      setItems(data.items || []);
+      setOpen(data.items.length > 0);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     load();
-    return () => { cancelled = true; };
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   if (loading || items.length === 0 || !open) return null;
