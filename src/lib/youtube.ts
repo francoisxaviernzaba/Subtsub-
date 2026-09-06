@@ -20,7 +20,8 @@ export function makeOAuth2Client() {
 export function buildAuthUrl(state: string) {
   const oauth2 = makeOAuth2Client();
   return oauth2.generateAuthUrl({
-    access_type: "online",
+    access_type: "offline",
+    prompt: "consent",
     scope: YT_SCOPES,
     state,
   });
