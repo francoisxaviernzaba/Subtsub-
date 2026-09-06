@@ -88,6 +88,15 @@ export async function POST(req: NextRequest) {
         throw new HttpError(400, "NO_OAUTH", "Connect your YouTube channel via Google OAuth in Settings to verify subscriptions");
       }
 
+      const missingScope = myChannel.scope && !myChannel.scope.includes("youtube.readonly");
+      if (missingScope) {
+        await prisma.taskCompletion.update({
+          where: { id: txResult.completion.id },
+          data: { state: "FAILED", failureReason: "BAD_SCOPE" },
+        });
+        throw new HttpError(400, "BAD_SCOPE", "Your YouTube connection is missing the required verification scope. Please reconnect your channel in Settings.");
+      }
+
       let verify: { verified: boolean; reason?: string };
       try {
         let token = decryptToken(myChannel.accessTokenCipher);
@@ -116,6 +125,8 @@ export async function POST(req: NextRequest) {
           ? "We can't find your subscription! Ensure your channel isn't private. Visit your YouTube Privacy Settings and turn off 'Keep all my subscriptions private', then verify again."
           : verify.reason === "OAUTH_VERIFICATION_FAILED"
           ? "Subscription verification failed. Please reconnect your YouTube channel in Settings and try again."
+          : verify.reason!.startsWith("API_ERROR_")
+          ? `YouTube verification failed (${verify.reason!}). Please reconnect your channel in Settings or try again later.`
           : "Verification unavailable. Please try again later.";
         throw new HttpError(400, verify.reason || "UNVERIFIED", msg);
       }
