@@ -14,9 +14,10 @@ export const metadata: Metadata = {
     "Watch boosted videos, subscribe to boosted channels, and earn coins. Spend coins to boost your own YouTube presence.",
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
   icons: {
-    icon: [{ url: "/favicon.ico" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/favicon.ico", sizes: "64x64 32x32 24x24 16x16", type: "image/x-icon" }],
+    apple: [{ url: "/icon.svg", sizes: "512x512", type: "image/svg+xml" }],
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "SUB2SUB",
     description: "Watch. Subscribe. Earn. Boost.",
