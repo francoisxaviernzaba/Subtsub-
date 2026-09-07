@@ -19,7 +19,7 @@ export default function PrivacyPage() {
         <h2 className="text-lg font-semibold text-ink-900">3. Data Sharing</h2>
         <p>We do not sell your personal data. We may share data with: service providers (Buy Me a Coffee for payments); legal authorities when required by law.</p>
         <h2 className="text-lg font-semibold text-ink-900">4. YouTube Data</h2>
-        <p>We access your YouTube data only with your explicit consent via OAuth. We store encrypted tokens and never access your YouTube password.</p>
+        <p>We verify subscriptions using public YouTube channel data. No passwords, no OAuth tokens, and no private account access required.</p>
         <h2 className="text-lg font-semibold text-ink-900">5. Cookies</h2>
         <p>We use essential cookies for authentication and session management. We do not use tracking cookies for advertising.</p>
         <h2 className="text-lg font-semibold text-ink-900">6. Data Security</h2>

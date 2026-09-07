@@ -59,23 +59,17 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="p-3 rounded-xl bg-sky-50 text-sky-800 text-sm flex gap-2">
-              <Youtube size={16} className="mt-0.5 flex-shrink-0" />
+            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 text-sm flex gap-2">
+              <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" />
               <div>
-                <div className="font-semibold">For S2S tasks and subscription verification</div>
-                <div className="text-xs">You must connect via Google OAuth. This grants the <code className="bg-sky-100 px-1 rounded">youtube.readonly</code> scope so the platform can verify your subscriptions via the YouTube Data API.</div>
+                <div className="font-semibold">Connect your YouTube channel</div>
+                <div className="text-xs">Enter your public YouTube channel handle or URL. This enables S2S subscription tasks and profile display. No Google OAuth or password required.</div>
               </div>
             </div>
-            <button onClick={async () => { window.location.href = "/api/youtube/connect"; }} className="btn btn-primary w-full"><Youtube size={14} /> Connect with Google OAuth</button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[rgb(var(--border))]"></div></div>
-              <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-ink-500">or</span></div>
-            </div>
-
             <div>
               <div className="font-semibold">Link by channel handle</div>
-              <div className="text-sm text-ink-500">Enter any public YouTube channel handle or URL. This is for campaign creation and profile display only — it does not enable S2S subscription verification.</div>
+              <div className="text-sm text-ink-500">Use your public YouTube handle or channel URL. Your channel and subscriptions must be public for verification to work.</div>
+
             </div>
             <div className="flex gap-2">
               <input
@@ -95,8 +89,9 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
         <div className="p-3 rounded-xl bg-amber-50 text-amber-800 text-sm flex gap-2">
           <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
           <div>
-            <div className="font-semibold">Keep your channel public and subscriptions visible</div>
-            <div className="text-xs">Subscription verification requires the channel and subscriptions to be public. If verification fails, visit your <a href="https://www.youtube.com/account_privacy" target="_blank" rel="noopener noreferrer" className="underline">YouTube Privacy Settings</a> and turn off &quot;Keep all my subscriptions private.&quot;</div>
+            <div className="font-semibold">Your YouTube profile and subscriptions must be public</div>
+            <div className="text-xs">Our background audit system checks channel compliance daily. Visit your <a href="https://www.youtube.com/account_privacy" target="_blank" rel="noopener noreferrer" className="underline">YouTube Privacy Settings</a> and turn off &quot;Keep all my subscriptions private&quot; to stay eligible.</div>
+
           </div>
         </div>
       </div>

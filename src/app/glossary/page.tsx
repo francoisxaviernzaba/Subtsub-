@@ -39,7 +39,7 @@ export default function GlossaryPage() {
           </div>
           <div>
             <div className="font-semibold">OAuth</div>
-            <p>An authorization protocol that allows apps to access user accounts without requiring passwords. SUB2SUB uses OAuth for read-only access to your YouTube channel, keeping your account secure.</p>
+            <p>An authorization protocol that allows apps to access user accounts without requiring passwords. SUB2SUB no longer requires OAuth — it uses public channel verification instead, so your account stays secure without extra permissions.</p>
           </div>
           <div>
             <div className="font-semibold">YouTube Data API v3</div>

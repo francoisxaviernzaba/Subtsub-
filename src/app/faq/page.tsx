@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     question: "Is SUB2SUB safe for my YouTube channel?",
-    answer: "Yes. We use the official YouTube Data API v3 to verify subscriptions and views. We never ask for your YouTube password, and we only use OAuth for read-only access. Your channel remains secure.",
+    answer: "Yes. We use the official YouTube Data API v3 to verify subscriptions and views. We never ask for your YouTube password, and we only use Public channel verification. Your channel remains secure.",
   },
   {
     question: "How do I earn coins?",

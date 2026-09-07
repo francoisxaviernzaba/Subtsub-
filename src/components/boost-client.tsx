@@ -318,7 +318,7 @@ function SubscriberWizard({ settings, balance, youtube }: { settings: Settings; 
           <span className="font-extrabold text-base">{formatCoins(budget)} 🪙</span>
         </div>
         <div className="text-[11px] text-ink-500 pt-1 border-t border-[rgb(var(--border))]">
-          Subscribers must verify ownership of a YouTube account. Subscriptions are re-verified every 5 minutes — if a user unsubscribes, their reward is reversed.
+          Subscribers must keep their YouTube channel and subscriptions public. Our background audit system checks compliance daily — if a user unsubscribes, their reward is reversed.
         </div>
       </div>
 

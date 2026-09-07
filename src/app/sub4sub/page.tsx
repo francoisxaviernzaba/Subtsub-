@@ -23,7 +23,7 @@ export default function Sub4SubPage() {
           <li>Verified subscriptions via YouTube API</li>
           <li>Real watch time with server-side verification</li>
           <li>Coin-based rewards instead of manual exchanges</li>
-          <li>OAuth-only access, no passwords required</li>
+          <li>Public channel verification — no passwords required</li>
           <li>Safe for your channel&apos;s long-term health</li>
         </ul>
         <h2 className="text-lg font-semibold text-ink-900">Making the Switch</h2>

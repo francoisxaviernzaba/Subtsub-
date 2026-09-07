@@ -46,8 +46,9 @@ export function S2SGrid({ initial }: { initial: Item[] }) {
 
 function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
   const router = useRouter();
-  const [state, setState] = useState<"idle" | "verifying" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "opened" | "countdown" | "verifying" | "done" | "error">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(5);
 
   const channelTitle = campaign.owner.youtubeChannel?.title || campaign.owner.name || "Channel";
   const channelHandle = campaign.owner.youtubeChannel?.handle || "";
@@ -57,6 +58,19 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
 
   const doClaim = useCallback(async () => {
     if (state === "verifying" || state === "done") return;
+    if (state === "idle") {
+      setState("opened");
+      window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
+      let remainingSec = 5;
+      setCountdown(remainingSec);
+      setState("countdown");
+      const timer = setInterval(() => {
+        remainingSec -= 1;
+        setCountdown(remainingSec);
+        if (remainingSec <= 0) clearInterval(timer);
+      }, 1000);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
     setState("verifying");
     setErrMsg(null);
     try {
@@ -80,7 +94,7 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
       setState("error");
       setErrMsg("Network error");
     }
-  }, [campaign.id, onDone, router, state]);
+  }, [campaign.id, campaign.youtubeChannelId, onDone, router, state]);
 
   useEffect(() => {
     function onFocus() {
@@ -122,6 +136,14 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
             <div className="text-xs text-rose-600">{errMsg}</div>
             <button onClick={doClaim} className="btn btn-outline w-full">Try again</button>
           </>
+        ) : state === "countdown" ? (
+          <button disabled className="btn btn-primary w-full">
+            <Loader2 size={14} className="animate-spin" /> Verify in {countdown}s
+          </button>
+        ) : state === "opened" ? (
+          <button onClick={doClaim} className="btn btn-primary w-full">
+            <Users size={14} /> Verify My Subscription
+          </button>
         ) : state === "verifying" ? (
           <button disabled className="btn btn-primary w-full">
             <Loader2 size={14} className="animate-spin" /> Verifying…

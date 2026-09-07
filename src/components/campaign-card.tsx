@@ -32,8 +32,9 @@ type Props = {
 
 export function CampaignCard({ campaign, onOpenVideo }: Props) {
   const router = useRouter();
-  const [state, setState] = useState<"idle" | "verifying" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "opened" | "countdown" | "verifying" | "done" | "error">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(5);
 
   const remaining = Math.max(0, campaign.maxActions - campaign.completedActions);
   const budgetLeft = Math.max(0, campaign.totalBudget - campaign.spentBudget);
@@ -62,13 +63,49 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
   }
 
   async function claimSubscribe() {
-    if (!isClaimable || state !== "idle") return;
-    if (!campaign.youtubeChannelId) return;
+    if (!isClaimable) return;
+    if (state === "idle") {
+      setState("opened");
+      window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
+      let remaining = 5;
+      setCountdown(remaining);
+      setState("countdown");
+      const timer = setInterval(() => {
+        remaining -= 1;
+        setCountdown(remaining);
+        if (remaining <= 0) {
+          clearInterval(timer);
+        }
+      }, 1000);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      setState("verifying");
+      setErrMsg(null);
+      try {
+        const r = await fetch("/api/tasks/subscribe/claim", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ campaignId: campaign.id }),
+        });
+        const j = await r.json();
+        if (!r.ok) {
+          setState("error");
+          setErrMsg(j?.error?.message || "Could not verify");
+          toast({ title: "Verification failed", description: j?.error?.message || "Please try again", variant: "error" });
+          return;
+        }
+        setState("done");
+        toast({ title: `+${j.reward} coins`, description: "Subscription verified", variant: "success" });
+        router.refresh();
+      } catch {
+        setState("error");
+        setErrMsg("Network error");
+      }
+      return;
+    }
+    if (state !== "countdown") return;
     setState("verifying");
     setErrMsg(null);
-    window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
     try {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
       const r = await fetch("/api/tasks/subscribe/claim", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -145,7 +182,7 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
           ) : state === "error" ? (
             <div className="space-y-2">
               <div className="text-xs text-rose-600">{errMsg}</div>
-              <button onClick={isVideo ? startVideo : claimSubscribe} className="btn btn-outline w-full">Try again</button>
+              <button onClick={claimSubscribe} className="btn btn-outline w-full">Try again</button>
             </div>
           ) : isBlocked ? (
             <div className="btn w-full bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed" title="This campaign is no longer available">
@@ -158,6 +195,18 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
               className="btn btn-primary w-full"
             >
               <Play size={14} /> Watch & Earn
+            </button>
+          ) : state === "countdown" ? (
+            <button disabled className="btn btn-primary w-full">
+              <Loader2 size={14} className="animate-spin" /> Verify in {countdown}s
+            </button>
+          ) : state === "opened" ? (
+            <button onClick={claimSubscribe} className="btn btn-primary w-full">
+              <Users size={14} /> Verify My Subscription
+            </button>
+          ) : state === "verifying" ? (
+            <button disabled className="btn btn-primary w-full">
+              <Loader2 size={14} className="animate-spin" /> Verifying…
             </button>
           ) : state === "idle" ? (
             <button

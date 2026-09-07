@@ -16,14 +16,14 @@ export default function YouTubeChannelPromotionPage() {
       <div className="card p-6 space-y-4 text-sm text-ink-500 leading-relaxed">
         <p>YouTube channel promotion on SUB2SUB helps creators gain authentic subscribers through verified campaigns. When you launch a subscriber campaign, real creators from our community subscribe to your channel. Each subscription is verified using the YouTube Data API v3, ensuring that the subscriber count you see is genuine and compliant with YouTube&apos;s terms.</p>
         <h2 className="text-lg font-semibold text-ink-900">How Channel Promotion Works</h2>
-        <p>Start by linking your YouTube channel via OAuth. Then, create a subscriber campaign with your coin budget. The platform matches your campaign with creators who are actively looking to subscribe. Each subscription is checked via YouTube&apos;s API, so you get real subscribers who have genuinely opted in. No bots, no fake accounts, no risk to your channel.</p>
+        <p>Start by linking your YouTube channel via its public handle or URL. Then, create a subscriber campaign with your coin budget. The platform matches your campaign with creators who are actively looking to subscribe. Each subscription is checked via YouTube&apos;s API, so you get real subscribers who have genuinely opted in. No bots, no fake accounts, no risk to your channel.</p>
         <h2 className="text-lg font-semibold text-ink-900">Why Real Subscribers Matter</h2>
         <p>A subscriber base of real people means higher engagement rates, more comments, and better video performance. YouTube&apos;s algorithm favors channels with genuine engagement. By using SUB2SUB, you build a foundation of real subscribers who are more likely to watch, like, and share your content.</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Verified subscribers via YouTube Data API v3</li>
           <li>Set campaign budgets with coin packages</li>
           <li>Real-time subscriber count tracking</li>
-          <li>No password required — OAuth only</li>
+          <li>No password required — Public channel verification</li>
           <li>Safe, compliant with YouTube terms</li>
         </ul>
         <h2 className="text-lg font-semibold text-ink-900">Combine With Video Promotion</h2>

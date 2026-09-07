@@ -20,13 +20,13 @@ export default function Sub2SubVsSub4SubPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li>Sub2Sub: Verified by YouTube API, real watch time, coin-based rewards</li>
           <li>Sub4Sub: Manual exchanges, no verification, risk of fake subscribers</li>
-          <li>Sub2Sub: OAuth-only access, never asks for passwords</li>
+          <li>Sub2Sub: Public channel verification — no password or token required</li>
           <li>Sub4Sub: Often requires channel access or personal information</li>
           <li>Sub2Sub: Multi-platform discovery (YouTube, TikTok, Instagram)</li>
           <li>Sub4Sub: Usually limited to YouTube-only, unstructured exchanges</li>
         </ul>
         <h2 className="text-lg font-semibold text-ink-900">Safety and Compliance</h2>
-        <p>SUB2SUB is designed with safety in mind. By using OAuth read-only access and API verification, we eliminate the risk of account hacking and ensure compliance with YouTube policies. Traditional sub4sub groups can expose your channel to botting, fake engagement, and even shadow banning. Learn more in our <Link href="/topics/sub2sub-vs-sub4sub-safety-breakdown" className="text-brand-500 hover:underline">detailed safety breakdown</Link>.</p>
+        <p>SUB2SUB is designed with safety in mind. By using public channel verification and API checks, we eliminate the risk of account hacking and ensure compliance with YouTube policies. Traditional sub4sub groups can expose your channel to botting, fake engagement, and even shadow banning. Learn more in our <Link href="/topics/sub2sub-vs-sub4sub-safety-breakdown" className="text-brand-500 hover:underline">detailed safety breakdown</Link>.</p>
         <h2 className="text-lg font-semibold text-ink-900">Which Should You Choose?</h2>
         <p>If you want fast, risky growth with no guarantees, traditional sub4sub might seem appealing. But if you want sustainable, verified growth that protects your channel, SUB2SUB is the clear choice. With real watch time, authentic subscribers, and a supportive community, SUB2SUB delivers results that last.</p>
       </div>
