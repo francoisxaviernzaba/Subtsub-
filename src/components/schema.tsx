@@ -35,8 +35,8 @@ export function OrganizationSchema() {
       "@type": "Organization",
       name: "SUB2SUB",
       description: "YouTube growth platform - Watch, Subscribe, Earn, Boost",
-      url: process.env.NEXTAUTH_URL || "https://subtsub.vercel.app",
-      logo: `${process.env.NEXTAUTH_URL || "https://subtsub.vercel.app"}/icon.svg`,
+      url: process.env.NEXTAUTH_URL || "https://sub2sub.com",
+      logo: `${process.env.NEXTAUTH_URL || "https://sub2sub.com"}/icon.svg`,
       sameAs: [],
     };
     const script = document.createElement("script");
@@ -55,7 +55,7 @@ export function WebApplicationSchema() {
       "@type": "WebApplication",
       name: "SUB2SUB",
       description: "Earn coins by watching videos and subscribing to YouTube channels. Boost your YouTube growth.",
-      url: process.env.NEXTAUTH_URL || "https://subtsub.vercel.app",
+      url: process.env.NEXTAUTH_URL || "https://sub2sub.com",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       offers: {

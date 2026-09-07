@@ -3,9 +3,6 @@
   "framework": "nextjs",
   "regions": ["iad1"],
   "crons": [
-    {
-      "path": "/api/cron/audit-subscriptions",
-      "schedule": "0 3 * * *"
-    }
+    { "path": "/api/cron/audit-subscriptions", "schedule": "0 3 * * *" }
   ]
 }

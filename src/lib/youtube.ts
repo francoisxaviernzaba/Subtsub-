@@ -10,6 +10,7 @@ export const YT_SCOPES = [
   "openid",
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
+  "https://www.googleapis.com/auth/youtube.readonly",
 ];
 
 export function makeOAuth2Client() {
@@ -19,7 +20,8 @@ export function makeOAuth2Client() {
 export function buildAuthUrl(state: string) {
   const oauth2 = makeOAuth2Client();
   return oauth2.generateAuthUrl({
-    access_type: "online",
+    access_type: "offline",
+    prompt: "consent",
     scope: YT_SCOPES,
     state,
   });
@@ -218,7 +220,7 @@ export async function checkSubscriptionViaCreator(
   _refreshToken: string | null,
   userChannelId: string,
   targetChannelId: string,
-): Promise<{ verified: boolean; reason?: string }> {
+): Promise<{ verified: boolean; reason?: string; details?: string }> {
   try {
     if (!/^UC[A-Za-z0-9_-]{22}$/.test(userChannelId)) {
       return { verified: false, reason: "INVALID_USER_CHANNEL" };
@@ -242,4 +244,70 @@ export async function checkSubscriptionViaCreator(
 
 export function ytThumbFromVideoId(id: string) {
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+}
+
+export async function checkSubscriptionViaSubscriberOAuth(
+  accessToken: string,
+  targetChannelId: string,
+): Promise<{ verified: boolean; reason?: string; details?: string }> {
+  if (!accessToken || !targetChannelId) {
+    return { verified: false, reason: "INVALID_PARAMS" };
+  }
+  try {
+    const url = new URL("https://www.googleapis.com/youtube/v3/subscriptions");
+    url.searchParams.set("mine", "true");
+    url.searchParams.set("forChannelId", targetChannelId);
+    url.searchParams.set("part", "id,snippet");
+    url.searchParams.set("maxResults", "1");
+
+    const resp = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      return { verified: false, reason: `API_ERROR_${resp.status}`, details: text };
+    }
+
+    const data = await resp.json();
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      const sub = data.items[0];
+      const subChannelId = sub?.snippet?.resourceId?.channelId;
+      if (subChannelId && subChannelId === targetChannelId) {
+        return { verified: true };
+      }
+      return { verified: false, reason: "NOT_SUBSCRIBED" };
+    }
+    return { verified: false, reason: "NOT_SUBSCRIBED" };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[youtube] subscriber OAuth check failed", msg);
+    return { verified: false, reason: "NETWORK_ERROR" };
+  }
+}
+
+export async function refreshAccessToken(refreshToken: string): Promise<string> {
+  const ytClientId = process.env.YOUTUBE_CLIENT_ID;
+  const ytClientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+  if (!ytClientId || !ytClientSecret) throw new Error("YouTube OAuth credentials not configured");
+
+  const resp = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: ytClientId,
+      client_secret: ytClientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => "");
+    throw new Error(`Token refresh failed: ${resp.status} ${text}`);
+  }
+
+  const data = await resp.json();
+  if (!data.access_token) throw new Error("No access_token in refresh response");
+  return data.access_token;
 }
