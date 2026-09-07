@@ -18,10 +18,10 @@ jobs:
         with:
           api-level: 34
           build-tools: 34.0.0
-      - name: Prepare web assets
+      - name: Install dependencies
         run: |
-          mkdir -p android/app/src/main/assets/public
-          cp -R out/* android/app/src/main/assets/public/
+          npm install
+          npx cap sync android
       - name: Create debug keystore
         run: |
           mkdir -p android/app
