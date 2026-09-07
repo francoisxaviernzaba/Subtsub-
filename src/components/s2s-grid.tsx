@@ -58,116 +58,17 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
 
   const doClaim = useCallback(async () => {
     if (state === "verifying" || state === "done") return;
-    if (state === "idle") {
-      setState("opened");
-      window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
-      let remainingSec = 5;
-      setCountdown(remainingSec);
-      setState("countdown");
-      const timer = setInterval(() => {
-        remainingSec -= 1;
-        setCountdown(remainingSec);
-        if (remainingSec <= 0) clearInterval(timer);
-      }, 1000);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-    setState("verifying");
-    setErrMsg(null);
-    try {
-      const r = await fetch("/api/tasks/subscribe/claim", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ campaignId: campaign.id }),
-      });
-      const j = await r.json();
-      if (!r.ok) {
+    if (isNativeApp() && state === "idle") {
+      setState("verifying");
+      setErrMsg(null);
+      try {
+        await window.Capacitor.Plugins.YouTubeOverlay.openYouTubeOverlay({
+          url: `https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`,
+        });
+      } catch {
         setState("error");
-        setErrMsg(j?.error?.message || "Could not verify");
-        toast({ title: "Verification failed", description: j?.error?.message, variant: "error" });
-        return;
+        setErrMsg("Native overlay failed");
       }
-      setState("done");
-      toast({ title: `+${j.reward} coins`, description: "Subscription verified", variant: "success" });
-      onDone();
-      router.refresh();
-    } catch (e) {
-      setState("error");
-      setErrMsg("Network error");
+      return;
     }
-  }, [campaign.id, campaign.youtubeChannelId, onDone, router, state]);
-
-  useEffect(() => {
-    function onFocus() {
-      if (state === "idle") doClaim();
-    }
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [doClaim, state]);
-
-  return (
-    <div className="card p-4">
-      <div className="flex items-center gap-3">
-        <div className="size-12 rounded-full overflow-hidden bg-[rgb(var(--border))] flex-shrink-0">
-          {channelAvatar && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={channelAvatar} alt="" className="size-full object-cover" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold truncate">{channelTitle}</div>
-          {channelHandle && <div className="text-xs text-ink-500">@{channelHandle}</div>}
-        </div>
-        <div className="chip bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold">
-          <Coins size={12} /> {campaign.rewardPerAction}
-        </div>
-      </div>
-
-      <div className="mt-3 text-sm text-ink-500">
-        Subscribers campaign · {formatNumber(remaining)} left · {formatNumber(budgetLeft)} 🪙 left
-      </div>
-
-      <div className="mt-3 space-y-2">
-        {state === "done" ? (
-          <div className="btn w-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-            <CheckCircle2 size={14} /> Verified · +{campaign.rewardPerAction}
-          </div>
-        ) : state === "error" ? (
-          <>
-            <div className="text-xs text-rose-600">{errMsg}</div>
-            <button onClick={doClaim} className="btn btn-outline w-full">Try again</button>
-          </>
-        ) : state === "countdown" ? (
-          <button disabled className="btn btn-primary w-full">
-            <Loader2 size={14} className="animate-spin" /> Verify in {countdown}s
-          </button>
-        ) : state === "opened" ? (
-          <button onClick={doClaim} className="btn btn-primary w-full">
-            <Users size={14} /> I confirm I subscribed
-          </button>
-        ) : state === "verifying" ? (
-          <button disabled className="btn btn-primary w-full">
-            <Loader2 size={14} className="animate-spin" /> Verifying…
-          </button>
-        ) : (
-          <>
-            <a
-              href={`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-outline w-full"
-            >
-              <ExternalLink size={14} /> Open & Subscribe on YouTube
-            </a>
-            <button onClick={doClaim} className="btn btn-primary w-full">
-              <Users size={14} /> I confirm I subscribed
-            </button>
-          </>
-        )}
-        <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          <AlertTriangle size={12} className="flex-shrink-0" />
-          <span>False attestations may result in account suspension. Our system audits public subscription data daily.</span>
-        </div>
-      </div>
-    </div>
-  );
-}
+    if (!isNativeApp() && state === "idle") {
