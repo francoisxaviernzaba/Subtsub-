@@ -18,6 +18,10 @@ jobs:
         with:
           api-level: 34
           build-tools: 34.0.0
+      - name: Prepare web assets
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp -R out/* android/app/src/main/assets/public/
       - name: Create debug keystore
         run: |
           mkdir -p android/app
