@@ -195,6 +195,7 @@ model TaskCompletion {
   verifiedAt    DateTime?
   revokedAt     DateTime?
   revokeReason  String?
+  attestationMethod String? // PUBLIC_CHECK | SELF_ATTESTATION
   // When the next background re-verification should run (for SUBSCRIBE)
   nextCheckAt   DateTime?
   // Counter of background re-verifications done (for SUBSCRIBE)

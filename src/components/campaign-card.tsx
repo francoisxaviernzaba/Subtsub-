@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Coins, Eye, Users, Loader2, Play, CheckCircle2, Lock, SkipForward } from "lucide-react";
+import { Coins, Eye, Users, Loader2, Play, CheckCircle2, Lock, SkipForward, AlertTriangle } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
@@ -170,7 +170,7 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
           {isVideo && <span>{campaign.minWatchSeconds}s watch</span>}
         </div>
 
-        <div className="mt-3">
+        <div className="mt-3 space-y-2">
           {state === "done" || isCompleted ? (
             <div className="btn w-full bg-emerald-100 text-emerald-700 border border-emerald-200" title="You already earned this reward">
               <CheckCircle2 size={14} /> Reward earned · +{campaign.rewardPerAction}
@@ -202,7 +202,7 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
             </button>
           ) : state === "opened" ? (
             <button onClick={claimSubscribe} className="btn btn-primary w-full">
-              <Users size={14} /> Verify My Subscription
+              <Users size={14} /> I confirm I subscribed
             </button>
           ) : state === "verifying" ? (
             <button disabled className="btn btn-primary w-full">
@@ -214,12 +214,18 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
               disabled={!isClaimable}
               className="btn btn-primary w-full"
             >
-              <Users size={14} /> Subscribe on YouTube → Verify
+              <Users size={14} /> I confirm I subscribed
             </button>
           ) : (
             <button disabled className="btn btn-primary w-full">
               <Loader2 size={14} className="animate-spin" /> Verifying…
             </button>
+          )}
+          {!isVideo && state !== "done" && !isCompleted && !isPending && state !== "verifying" && (
+            <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertTriangle size={12} className="flex-shrink-0" />
+              <span>False attestations may result in account suspension. Our system audits public subscription data daily.</span>
+            </div>
           )}
         </div>
       </div>

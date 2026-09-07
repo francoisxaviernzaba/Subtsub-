@@ -4,11 +4,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { handleError, HttpError, withIdempotency } from "@/lib/api";
 import { rateLimit, getClientKey } from "@/lib/ratelimit";
-import { checkSubscriptionViaCreator, checkSubscriptionViaSubscriberOAuth, refreshAccessToken } from "@/lib/youtube";
+import { checkSubscriptionViaCreator } from "@/lib/youtube";
 import { creditCoins } from "@/lib/coins";
 import { getSettings } from "@/lib/settings";
 import { addXp, updateDailyStreak, incrementDailyQuest } from "@/lib/gamification";
-import { decryptToken, encryptToken } from "@/lib/crypto";
 
 const Body = z.object({
   campaignId: z.string().min(1),
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
         if (existing) {
           if (existing.state === "VERIFIED") throw new HttpError(409, "DUPLICATE", "You already subscribed to this channel");
           if (existing.state === "PENDING") throw new HttpError(409, "PENDING", "Verification already in progress");
-          if (existing.state === "FAILED" || existing.state === "REVERSED") {
+          if (existing.state === "FAILED" || existing.state === "REVOKED" || existing.state === "REVERSED") {
             await tx.taskCompletion.delete({ where: { id: existing.id } });
           }
         }
@@ -69,6 +68,7 @@ export async function POST(req: NextRequest) {
             rewardCoins: reward,
             nextCheckAt: new Date(Date.now() + 5 * 60 * 1000),
             idempotencyKey: idempotencyKey ?? null,
+            attestationMethod: "SELF_ATTESTATION",
           },
         });
 
@@ -80,61 +80,22 @@ export async function POST(req: NextRequest) {
         };
       });
 
-      if (!myChannel.accessTokenCipher) {
-        await prisma.taskCompletion.update({
-          where: { id: txResult.completion.id },
-          data: { state: "FAILED", failureReason: "NO_OAUTH" },
-        });
-        throw new HttpError(400, "NO_OAUTH", "Connect your YouTube channel via Google OAuth in Settings to verify subscriptions");
-      }
-
-      const missingScope = myChannel.scope && !myChannel.scope.includes("youtube.readonly");
-      if (missingScope) {
-        await prisma.taskCompletion.update({
-          where: { id: txResult.completion.id },
-          data: { state: "FAILED", failureReason: "BAD_SCOPE" },
-        });
-        throw new HttpError(400, "BAD_SCOPE", "Your YouTube connection is missing the required verification scope. Please reconnect your channel in Settings.");
-      }
-
-      let verify: { verified: boolean; reason?: string };
-      try {
-        let token = decryptToken(myChannel.accessTokenCipher);
-        if (myChannel.refreshTokenCipher) {
-          try {
-            token = await refreshAccessToken(decryptToken(myChannel.refreshTokenCipher));
-          } catch (refreshErr) {
-            const refreshMsg = refreshErr instanceof Error ? refreshErr.message : String(refreshErr);
-            console.error("[subscribe] token refresh failed", refreshMsg);
-            await prisma.taskCompletion.update({
-              where: { id: txResult.completion.id },
-              data: { state: "FAILED", failureReason: "OAUTH_VERIFICATION_FAILED" },
-            });
-            const msg = "Your YouTube connection is invalid or expired. Please reconnect your channel in Settings and try again.";
-            throw new HttpError(400, "OAUTH_VERIFICATION_FAILED", msg);
-          }
-        }
-        verify = await checkSubscriptionViaSubscriberOAuth(token, txResult.campaign.youtubeChannelId!);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        console.error("[subscribe] OAuth verification failed", msg);
-        if (msg.includes("OAUTH_VERIFICATION_FAILED")) throw e;
-        verify = { verified: false, reason: "OAUTH_VERIFICATION_FAILED" };
-      }
+      const verify = await checkSubscriptionViaCreator(
+        null,
+        null,
+        txResult.userChannelId,
+        txResult.campaign.youtubeChannelId!,
+      );
 
       if (!verify.verified) {
         await prisma.taskCompletion.update({
           where: { id: txResult.completion.id },
           data: { state: "FAILED", failureReason: verify.reason || "NOT_SUBSCRIBED" },
         });
-        const msg = verify.reason === "NOT_SUBSCRIBED"
-          ? "You are not subscribed to this channel. Please subscribe on YouTube first."
-          : verify.reason === "PRIVATE"
+        const msg = verify.reason === "PRIVATE"
           ? "We can't find your subscription! Ensure your channel isn't private. Visit your YouTube Privacy Settings and turn off 'Keep all my subscriptions private', then verify again."
-          : verify.reason === "OAUTH_VERIFICATION_FAILED"
-          ? "Subscription verification failed. Please reconnect your YouTube channel in Settings and try again."
-          : verify.reason!.startsWith("API_ERROR_")
-          ? `YouTube verification failed (${verify.reason!}). Please reconnect your channel in Settings or try again later.`
+          : verify.reason === "NOT_SUBSCRIBED"
+          ? "We could not detect your subscription. Please subscribe on YouTube first, then verify."
           : "Verification unavailable. Please try again later.";
         throw new HttpError(400, verify.reason || "UNVERIFIED", msg);
       }

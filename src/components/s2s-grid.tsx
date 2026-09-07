@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Coins, Users, ExternalLink, CheckCircle2, Loader2, X } from "lucide-react";
+import { Coins, Users, ExternalLink, CheckCircle2, Loader2, X, AlertTriangle } from "lucide-react";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
@@ -142,7 +142,7 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
           </button>
         ) : state === "opened" ? (
           <button onClick={doClaim} className="btn btn-primary w-full">
-            <Users size={14} /> Verify My Subscription
+            <Users size={14} /> I confirm I subscribed
           </button>
         ) : state === "verifying" ? (
           <button disabled className="btn btn-primary w-full">
@@ -159,10 +159,14 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
               <ExternalLink size={14} /> Open & Subscribe on YouTube
             </a>
             <button onClick={doClaim} className="btn btn-primary w-full">
-              <Users size={14} /> Verify My Subscription
+              <Users size={14} /> I confirm I subscribed
             </button>
           </>
         )}
+        <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <AlertTriangle size={12} className="flex-shrink-0" />
+          <span>False attestations may result in account suspension. Our system audits public subscription data daily.</span>
+        </div>
       </div>
     </div>
   );
