@@ -2,30 +2,6 @@ import { google } from "googleapis";
 import { prisma } from "./db";
 
 const YT_API_KEY = process.env.YOUTUBE_API_KEY || "";
-const YT_CLIENT_ID = process.env.YOUTUBE_CLIENT_ID || "";
-const YT_CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET || "";
-const YT_REDIRECT = process.env.YOUTUBE_REDIRECT_URI || "http://localhost:3000/api/youtube/callback";
-
-export const YT_SCOPES = [
-  "openid",
-  "https://www.googleapis.com/auth/userinfo.email",
-  "https://www.googleapis.com/auth/userinfo.profile",
-  "https://www.googleapis.com/auth/youtube.readonly",
-];
-
-export function makeOAuth2Client() {
-  return new google.auth.OAuth2(YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REDIRECT);
-}
-
-export function buildAuthUrl(state: string) {
-  const oauth2 = makeOAuth2Client();
-  return oauth2.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
-    scope: YT_SCOPES,
-    state,
-  });
-}
 
 async function cached<T>(key: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
   const now = Date.now();
@@ -58,176 +34,63 @@ export type YTChannel = {
   isPublic?: boolean;
 };
 
-export type YTVideo = {
-  id: string;
-  title: string;
-  description?: string | null;
-  thumbnailUrl?: string | null;
-  channelId: string;
-  channelTitle: string;
-  publishedAt?: string | null;
-  durationSec?: number | null;
-  viewCount?: number | null;
-  likeCount?: number | null;
-};
-
-export function parseChannelId(input: string): string | null {
-  const trimmed = input.trim();
-  if (/^UC[A-Za-z0-9_-]{22}$/.test(trimmed)) return trimmed;
-  const m = trimmed.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{22})/);
-  if (m) return m[1];
-  return null;
+export async function getChannelById(channelId: string): Promise<YTChannel | null> {
+  if (!channelId || !YT_API_KEY) return null;
+  try {
+    const yt = google.youtube({ version: "v3", auth: YT_API_KEY });
+    const res = await yt.channels.list({
+      id: [channelId],
+      part: ["snippet", "statistics", "contentDetails"],
+      maxResults: 1,
+    });
+    const item = res.data.items?.[0];
+    if (!item) return null;
+    return {
+      id: item.id || channelId,
+      handle: null,
+      title: item.snippet?.title || null,
+      description: item.snippet?.description || null,
+      thumbnailUrl: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || null,
+      subscriberCount: item.statistics?.subscriberCount ? Number(item.statistics.subscriberCount) : null,
+      videoCount: item.statistics?.videoCount ? Number(item.statistics.videoCount) : null,
+      isPublic: true,
+    };
+  } catch (e) {
+    console.error("[youtube] getChannelById failed", e);
+    return null;
+  }
 }
 
-export function parseChannelHandle(input: string): string | null {
-  const trimmed = input.trim();
-  const m = trimmed.match(/(?:youtube\.com\/@|^@)([A-Za-z0-9._-]+)/);
-  return m ? m[1] : null;
-}
-
-export function parseVideoId(input: string): string | null {
-  const trimmed = input.trim();
-  if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
-  let m = trimmed.match(/[?&]v=([A-Za-z0-9_-]{11})/);
-  if (m) return m[1];
-  m = trimmed.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
-  if (m) return m[1];
-  m = trimmed.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/);
-  if (m) return m[1];
-  m = trimmed.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
-  if (m) return m[1];
-  return null;
-}
-
-function yt() {
-  if (!YT_API_KEY) throw new Error("YOUTUBE_API_KEY is not configured");
-  return google.youtube({ version: "v3", auth: YT_API_KEY });
-}
-
-export async function getChannelById(id: string): Promise<YTChannel | null> {
-  return cached(`channel:${id}`, 6 * 60 * 60 * 1000, async () => {
+export async function resolveChannelByHandle(handle: string): Promise<YTChannel | null> {
+  const clean = handle.replace(/^@/, "").trim();
+  if (!clean || !YT_API_KEY) return null;
+  const cacheKey = `handle:${clean}`;
+  return cached(cacheKey, 1000 * 60 * 60, async () => {
     try {
-      const res = await yt().channels.list({
-        part: ["snippet", "statistics", "status"],
-        id: [id],
+      const yt = google.youtube({ version: "v3", auth: YT_API_KEY });
+      const res = await yt.search.list({
+        q: clean,
+        type: ["channel"],
+        part: ["snippet"],
         maxResults: 1,
       });
       const item = res.data.items?.[0];
-      if (!item) return null;
-      return {
-        id: item.id!,
-        handle: item.snippet?.customUrl ?? undefined,
-        title: item.snippet?.title ?? "",
-        description: item.snippet?.description ?? undefined,
-        thumbnailUrl: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url,
-        subscriberCount: item.statistics?.subscriberCount ? Number(item.statistics.subscriberCount) : undefined,
-        videoCount: item.statistics?.videoCount ? Number(item.statistics.videoCount) : undefined,
-        isPublic: item.status?.privacyStatus !== "private",
-      };
+      if (!item?.snippet?.channelId) return null;
+      return getChannelById(item.snippet.channelId);
     } catch (e) {
-      console.error("[youtube] getChannelById failed", e);
+      console.error("[youtube] resolveChannelByHandle failed", e);
       return null;
     }
   });
 }
 
-export async function getChannelByHandle(handle: string): Promise<YTChannel | null> {
-  const clean = handle.replace(/^@/, "");
-  return cached(`channel:handle:${clean}`, 6 * 60 * 60 * 1000, async () => {
-    try {
-      const res = await yt().channels.list({
-        part: ["snippet", "statistics", "status"],
-        forHandle: clean,
-        maxResults: 1,
-      });
-      const item = res.data.items?.[0];
-      if (!item) return null;
-      return {
-        id: item.id!,
-        handle: item.snippet?.customUrl ?? clean,
-        title: item.snippet?.title ?? "",
-        description: item.snippet?.description ?? undefined,
-        thumbnailUrl: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url,
-        subscriberCount: item.statistics?.subscriberCount ? Number(item.statistics.subscriberCount) : undefined,
-        videoCount: item.statistics?.videoCount ? Number(item.statistics.videoCount) : undefined,
-        isPublic: item.status?.privacyStatus !== "private",
-      };
-    } catch (e) {
-      console.error("[youtube] getChannelByHandle failed", e);
-      return null;
-    }
-  });
-}
-
-export async function getVideoById(id: string): Promise<YTVideo | null> {
-  return cached(`video:${id}`, 30 * 60 * 1000, async () => {
-    try {
-      const res = await yt().videos.list({
-        part: ["snippet", "statistics", "contentDetails"],
-        id: [id],
-        maxResults: 1,
-      });
-      const item = res.data.items?.[0];
-      if (!item) return null;
-      const dur = item.contentDetails?.duration;
-      return {
-        id: item.id!,
-        title: item.snippet?.title ?? "",
-        description: item.snippet?.description ?? undefined,
-        thumbnailUrl: item.snippet?.thumbnails?.high?.url ?? item.snippet?.thumbnails?.medium?.url,
-        channelId: item.snippet?.channelId ?? "",
-        channelTitle: item.snippet?.channelTitle ?? "",
-        publishedAt: item.snippet?.publishedAt ?? undefined,
-        durationSec: dur ? parseISO8601Duration(dur) : undefined,
-        viewCount: item.statistics?.viewCount ? Number(item.statistics.viewCount) : undefined,
-        likeCount: item.statistics?.likeCount ? Number(item.statistics.likeCount) : undefined,
-      };
-    } catch (e) {
-      console.error("[youtube] getVideoById failed", e);
-      return null;
-    }
-  });
-}
-
-function parseISO8601Duration(d: string): number {
-  const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-  if (!m) return 0;
-  const h = Number(m[1] || 0);
-  const mm = Number(m[2] || 0);
-  const s = Number(m[3] || 0);
-  return h * 3600 + mm * 60 + s;
-}
-
-/**
- * Zero-Verification check: no restricted scopes used.
- *
- * The YouTube Data API does not allow reading a channel's subscriber list
- * without a restricted scope, so we cannot programmatically confirm a
- * subscription. Instead we verify what we CAN with an API key:
- *
- *   1. The user's claimed channel exists and is publicly visible.
- *   2. The target campaign channel exists and is publicly visible.
- *   3. The user has not already redeemed a reward for this target channel.
- *
- * Anti-cheat is handled by:
- *   - One reward per (user, target channel) — enforced by the DB unique index.
- *   - Daily cron that randomly samples verified completions and flags
- *     suspicious patterns (mass unsub, duplicate IPs, etc.).
- *   - Community reports & admin review.
- */
 export async function checkSubscriptionViaCreator(
-  _accessToken: string | null,
-  _refreshToken: string | null,
+  _auth: any,
+  _authClientId: string | null,
   userChannelId: string,
   targetChannelId: string,
-): Promise<{ verified: boolean; reason?: string; details?: string }> {
+): Promise<{ verified: boolean; reason?: string }> {
   try {
-    if (!/^UC[A-Za-z0-9_-]{22}$/.test(userChannelId)) {
-      return { verified: false, reason: "INVALID_USER_CHANNEL" };
-    }
-    if (!/^UC[A-Za-z0-9_-]{22}$/.test(targetChannelId)) {
-      return { verified: false, reason: "INVALID_TARGET_CHANNEL" };
-    }
     const [userCh, targetCh] = await Promise.all([
       getChannelById(userChannelId),
       getChannelById(targetChannelId),
@@ -244,70 +107,4 @@ export async function checkSubscriptionViaCreator(
 
 export function ytThumbFromVideoId(id: string) {
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-}
-
-export async function checkSubscriptionViaSubscriberOAuth(
-  accessToken: string,
-  targetChannelId: string,
-): Promise<{ verified: boolean; reason?: string; details?: string }> {
-  if (!accessToken || !targetChannelId) {
-    return { verified: false, reason: "INVALID_PARAMS" };
-  }
-  try {
-    const url = new URL("https://www.googleapis.com/youtube/v3/subscriptions");
-    url.searchParams.set("mine", "true");
-    url.searchParams.set("forChannelId", targetChannelId);
-    url.searchParams.set("part", "id,snippet");
-    url.searchParams.set("maxResults", "1");
-
-    const resp = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => "");
-      return { verified: false, reason: `API_ERROR_${resp.status}`, details: text };
-    }
-
-    const data = await resp.json();
-    if (Array.isArray(data.items) && data.items.length > 0) {
-      const sub = data.items[0];
-      const subChannelId = sub?.snippet?.resourceId?.channelId;
-      if (subChannelId && subChannelId === targetChannelId) {
-        return { verified: true };
-      }
-      return { verified: false, reason: "NOT_SUBSCRIBED" };
-    }
-    return { verified: false, reason: "NOT_SUBSCRIBED" };
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[youtube] subscriber OAuth check failed", msg);
-    return { verified: false, reason: "NETWORK_ERROR" };
-  }
-}
-
-export async function refreshAccessToken(refreshToken: string): Promise<string> {
-  const ytClientId = process.env.YOUTUBE_CLIENT_ID;
-  const ytClientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-  if (!ytClientId || !ytClientSecret) throw new Error("YouTube OAuth credentials not configured");
-
-  const resp = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: ytClientId,
-      client_secret: ytClientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
-  });
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(`Token refresh failed: ${resp.status} ${text}`);
-  }
-
-  const data = await resp.json();
-  if (!data.access_token) throw new Error("No access_token in refresh response");
-  return data.access_token;
 }

@@ -31,6 +31,11 @@
 
         </activity>
 
+        <activity android:name=".YouTubeOverlayActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:screenOrientation="portrait" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
