@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Coins, Eye, Users, Loader2, Play, CheckCircle2, Lock, SkipForward, AlertTriangle } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { toast } from "./toast";
