@@ -9,12 +9,7 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   android: {
-    buildOptions: {
-      signingConfig: {
-        debugSigningEnabled: true,
-        releaseSigningEnabled: true,
-      },
-    },
+    buildOptions: {},
   },
   plugins: {
     SplashScreen: {
