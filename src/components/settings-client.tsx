@@ -63,7 +63,7 @@ export function SettingsClient({ user, youtube, ytStatus, ytMessage }: { user: U
               <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" />
               <div>
                 <div className="font-semibold">Connect your YouTube channel</div>
-                <div className="text-xs">Enter your public YouTube channel handle or URL. This enables S2S subscription tasks and profile display. No Google OAuth or password required.</div>
+                 <div className="text-xs">Enter your public YouTube channel handle or URL. This enables S2S subscription tasks and profile display.</div>
               </div>
             </div>
             <div>
