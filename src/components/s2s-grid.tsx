@@ -5,7 +5,7 @@ import { Coins, Users, ExternalLink, CheckCircle2, Loader2, X, AlertTriangle } f
 import { formatNumber, timeAgo } from "@/lib/utils";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
-import { isNativeApp } from "@/lib/platform";
+import { isNativeApp, openYouTubeOverlay } from "@/lib/platform";
 
 type Item = {
   id: string;
@@ -63,9 +63,9 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
       setState("verifying");
       setErrMsg(null);
       try {
-        await window.Capacitor.Plugins.YouTubeOverlay.openYouTubeOverlay({
-          url: `https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`,
-        });
+        await openYouTubeOverlay(
+          `https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`
+        );
       } catch {
         setState("error");
         setErrMsg("Native overlay failed");

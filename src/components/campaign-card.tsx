@@ -6,7 +6,7 @@ import { formatNumber } from "@/lib/utils";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
 import { VideoPlayer, type VideoPlayerOpenPayload } from "./video-player";
-import { isNativeApp } from "@/lib/platform";
+import { isNativeApp, openYouTubeOverlay } from "@/lib/platform";
 
 type Campaign = {
   id: string;
@@ -69,9 +69,9 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
       setState("verifying");
       setErrMsg(null);
       try {
-        await window.Capacitor.Plugins.YouTubeOverlay.openYouTubeOverlay({
-          url: `https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`,
-        });
+        await openYouTubeOverlay(
+          `https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`
+        );
       } catch {
         setState("error");
         setErrMsg("Native overlay failed");
