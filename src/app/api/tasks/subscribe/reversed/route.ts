@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { checkSubscriptionViaSubscriberOAuth, refreshAccessToken } from "@/lib/youtube";
+import { checkSubscriptionViaCreator } from "@/lib/youtube";
 import { debitCoins } from "@/lib/coins";
 import { handleError, HttpError } from "@/lib/api";
-import { decryptToken } from "@/lib/crypto";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +11,7 @@ export async function GET(req: NextRequest) {
     if (!u?.user?.id) throw new HttpError(401, "UNAUTHORIZED", "Sign in required");
 
     const myChannel = await prisma.youTubeChannel.findUnique({ where: { userId: u.user.id } });
-    if (!myChannel?.accessTokenCipher) {
+    if (!myChannel?.youtubeId) {
       return NextResponse.json({ ok: true, items: [] });
     }
 
@@ -36,79 +35,47 @@ export async function GET(req: NextRequest) {
     });
 
     const reversed: any[] = [];
-    const authErrors: any[] = [];
 
     for (const completion of verified) {
       try {
-        let token = decryptToken(myChannel.accessTokenCipher);
-        if (myChannel.refreshTokenCipher) {
-          try {
-            token = await refreshAccessToken(decryptToken(myChannel.refreshTokenCipher));
-          } catch (refreshErr) {
-            const refreshMsg = refreshErr instanceof Error ? refreshErr.message : String(refreshErr);
-            console.error("[reversed] token refresh failed", refreshMsg);
-            authErrors.push({
-              id: completion.id,
-              campaignId: completion.campaign.id,
-              title: completion.campaign.title,
-              channelId: completion.campaign.youtubeChannelId,
-              thumbnailUrl: completion.campaign.thumbnailUrl,
-              rewardCoins: completion.rewardCoins,
-              failureReason: "OAUTH_VERIFICATION_FAILED",
-            });
-            continue;
-          }
-        }
-        const result = await checkSubscriptionViaSubscriberOAuth(token, completion.targetChannelId!);
+        const result = await checkSubscriptionViaCreator(null, null, myChannel.youtubeId, completion.targetChannelId!);
         if (!result.verified) {
-          if (result.reason === "NOT_SUBSCRIBED") {
-            await prisma.$transaction(async (tx) => {
-              await tx.taskCompletion.update({
-                where: { id: completion.id },
-                data: { state: "REVERSED", failureReason: result.reason || "NOT_SUBSCRIBED" },
-              });
-              await debitCoins({
-                userId: u.user.id,
-                amount: completion.rewardCoins,
-                type: "REVERSAL",
-                referenceType: "TaskCompletion",
-                referenceId: completion.id,
-                note: `Real-time reversal: ${result.reason || "not subscribed"} for ${completion.campaign.title}`,
-                idempotencyKey: `realtime.reversal.${completion.id}`,
-              });
-              await tx.campaign.update({
-                where: { id: completion.campaignId },
-                data: { spentBudget: { decrement: completion.rewardCoins }, completedActions: { decrement: 1 } },
-              });
+          await prisma.$transaction(async (tx) => {
+            await tx.taskCompletion.update({
+              where: { id: completion.id },
+              data: { state: "REVERSED", failureReason: result.reason || "NOT_SUBSCRIBED" },
             });
-            reversed.push({
-              id: completion.id,
-              campaignId: completion.campaign.id,
-              title: completion.campaign.title,
-              channelId: completion.campaign.youtubeChannelId,
-              thumbnailUrl: completion.campaign.thumbnailUrl,
-              rewardCoins: completion.rewardCoins,
-              failureReason: result.reason || "NOT_SUBSCRIBED",
-              revokedAt: new Date().toISOString(),
+            await debitCoins({
+              userId: u.user.id,
+              amount: completion.rewardCoins,
+              type: "REVERSAL",
+              referenceType: "TaskCompletion",
+              referenceId: completion.id,
+              note: `Reversal: ${result.reason || "not subscribed"} for ${completion.campaign.title}`,
+              idempotencyKey: `realtime.reversal.${completion.id}`,
             });
-          } else if (result.reason?.startsWith("API_ERROR_")) {
-            authErrors.push({
-              id: completion.id,
-              campaignId: completion.campaign.id,
-              title: completion.campaign.title,
-              channelId: completion.campaign.youtubeChannelId,
-              thumbnailUrl: completion.campaign.thumbnailUrl,
-              rewardCoins: completion.rewardCoins,
-              failureReason: result.reason,
+            await tx.campaign.update({
+              where: { id: completion.campaignId },
+              data: { spentBudget: { decrement: completion.rewardCoins }, completedActions: { decrement: 1 } },
             });
-          }
+          });
+          reversed.push({
+            id: completion.id,
+            campaignId: completion.campaign.id,
+            title: completion.campaign.title,
+            channelId: completion.campaign.youtubeChannelId,
+            thumbnailUrl: completion.campaign.thumbnailUrl,
+            rewardCoins: completion.rewardCoins,
+            failureReason: result.reason || "NOT_SUBSCRIBED",
+            revokedAt: new Date().toISOString(),
+          });
         }
       } catch {
         // skip failed checks
       }
     }
 
-    return NextResponse.json({ ok: true, items: reversed, authErrors });
+    return NextResponse.json({ ok: true, items: reversed });
   } catch (e) {
     return handleError(e);
   }

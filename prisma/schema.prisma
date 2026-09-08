@@ -123,7 +123,7 @@ model YouTubeChannel {
   connectedAt   DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // encrypted OAuth token blob (server-only); base64 of encrypted JSON
+  // public verification only; OAuth token fields removed
   // (kept here for sandbox; in prod use KMS / libsodium)
   accessTokenCipher  String?
   refreshTokenCipher String?

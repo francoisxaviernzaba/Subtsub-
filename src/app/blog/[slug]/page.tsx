@@ -102,7 +102,7 @@ const posts: Record<string, { title: string; content: React.ReactNode }> = {
         <h2 className="text-xl font-bold mt-6">Quality</h2>
         <p>With SUB2SUB, you get real engagement from active community members. Sub4sub often results in inactive subscribers who don&apos;t engage with your content.</p>
         <h2 className="text-xl font-bold mt-6">Safety</h2>
-        <p>SUB2SUB is much safer for your channel. We never ask for your password and use OAuth for read-only access. Traditional sub4sub can sometimes lead to account issues.</p>
+        <p>SUB2SUB is much safer for your channel. We never ask for your password and use public channel verification. Traditional sub4sub can sometimes lead to account issues.</p>
         <h2 className="text-xl font-bold mt-6">Conclusion</h2>
         <p>SUB2SUB is the clear winner for safe, effective YouTube growth. Our coin-based economy ensures quality interactions while protecting your channel.</p>
       </div>
