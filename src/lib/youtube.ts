@@ -23,6 +23,119 @@ async function cached<T>(key: string, ttlMs: number, loader: () => Promise<T>): 
   return data;
 }
 
+export type YTVideo = {
+  id: string;
+  title: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  channelId: string;
+  channelTitle: string;
+  publishedAt?: string | null;
+  durationSec?: number | null;
+  viewCount?: number | null;
+  likeCount?: number | null;
+};
+
+export function parseChannelId(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^UC[A-Za-z0-9_-]{22}$/.test(trimmed)) return trimmed;
+  const m = trimmed.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{22})/);
+  if (m) return m[1];
+  return null;
+}
+
+export function parseChannelHandle(input: string): string | null {
+  const trimmed = input.trim();
+  const m = trimmed.match(/(?:youtube\.com\/@|^@)([A-Za-z0-9._-]+)/);
+  return m ? m[1] : null;
+}
+
+export function parseVideoId(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  let m = trimmed.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = trimmed.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = trimmed.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = trimmed.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  return null;
+}
+
+function yt() {
+  if (!YT_API_KEY) throw new Error("YOUTUBE_API_KEY is not configured");
+  return google.youtube({ version: "v3", auth: YT_API_KEY });
+}
+
+export async function getChannelByHandle(handle: string): Promise<YTChannel | null> {
+  const clean = handle.replace(/^@/, "");
+  return cached(`channel:handle:${clean}`, 6 * 60 * 60 * 1000, async () => {
+    try {
+      const res = await yt().channels.list({
+        part: ["snippet", "statistics", "status"],
+        forHandle: clean,
+        maxResults: 1,
+      });
+      const item = res.data.items?.[0];
+      if (!item) return null;
+      return {
+        id: item.id!,
+        handle: item.snippet?.customUrl ?? clean,
+        title: item.snippet?.title ?? "",
+        description: item.snippet?.description ?? undefined,
+        thumbnailUrl: item.snippet?.thumbnails?.medium?.url ?? item.snippet?.thumbnails?.default?.url,
+        subscriberCount: item.statistics?.subscriberCount ? Number(item.statistics.subscriberCount) : undefined,
+        videoCount: item.statistics?.videoCount ? Number(item.statistics.videoCount) : undefined,
+        isPublic: item.status?.privacyStatus !== "private",
+      };
+    } catch (e) {
+      console.error("[youtube] getChannelByHandle failed", e);
+      return null;
+    }
+  });
+}
+
+export async function getVideoById(id: string): Promise<YTVideo | null> {
+  return cached(`video:${id}`, 30 * 60 * 1000, async () => {
+    try {
+      const res = await yt().videos.list({
+        part: ["snippet", "statistics", "contentDetails"],
+        id: [id],
+        maxResults: 1,
+      });
+      const item = res.data.items?.[0];
+      if (!item) return null;
+      const dur = item.contentDetails?.duration;
+      return {
+        id: item.id!,
+        title: item.snippet?.title ?? "",
+        description: item.snippet?.description ?? undefined,
+        thumbnailUrl: item.snippet?.thumbnails?.high?.url ?? item.snippet?.thumbnails?.medium?.url,
+        channelId: item.snippet?.channelId ?? "",
+        channelTitle: item.snippet?.channelTitle ?? "",
+        publishedAt: item.snippet?.publishedAt ?? undefined,
+        durationSec: dur ? parseISO8601Duration(dur) : undefined,
+        viewCount: item.statistics?.viewCount ? Number(item.statistics.viewCount) : undefined,
+        likeCount: item.statistics?.likeCount ? Number(item.statistics.likeCount) : undefined,
+      };
+    } catch (e) {
+      console.error("[youtube] getVideoById failed", e);
+      return null;
+    }
+  });
+}
+
+function parseISO8601Duration(d: string): number {
+  const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  const h = Number(m[1] || 0);
+  const mm = Number(m[2] || 0);
+  const s = Number(m[3] || 0);
+  return h * 3600 + mm * 60 + s;
+}
+
 export type YTChannel = {
   id: string;
   handle?: string | null;
