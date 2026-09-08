@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
             rewardCoins: reward,
             nextCheckAt: new Date(Date.now() + 5 * 60 * 1000),
             idempotencyKey: idempotencyKey ?? null,
-            attestationMethod: "SELF_ATTESTATION",
           },
         });
 
