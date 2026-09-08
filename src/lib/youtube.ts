@@ -161,8 +161,8 @@ export async function getChannelById(channelId: string): Promise<YTChannel | nul
     return {
       id: item.id || channelId,
       handle: null,
-      title: item.snippet?.title || null,
-      description: item.snippet?.description || null,
+      title: item.snippet?.title ?? "",
+      description: item.snippet?.description ?? null,
       thumbnailUrl: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || null,
       subscriberCount: item.statistics?.subscriberCount ? Number(item.statistics.subscriberCount) : null,
       videoCount: item.statistics?.videoCount ? Number(item.statistics.videoCount) : null,
