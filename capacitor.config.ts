@@ -7,6 +7,11 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://sub2sub.com',
     cleartext: true,
+    allowNavigation: [
+      'accounts.google.com',
+      '*.google.com',
+      'sub2sub.com',
+    ],
   },
   android: {
     buildOptions: {},
