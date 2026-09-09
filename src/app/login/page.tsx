@@ -12,6 +12,8 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
   const session = await auth();
   if (session?.user) redirect(searchParams.from || "/s2s");
 
+  const fromPath = searchParams.from || "/s2s";
+
   return (
     <div className="min-h-screen grid place-items-center px-5">
       <div className="card p-8 max-w-md w-full text-center">
@@ -28,13 +30,33 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
         <form
           action={async () => {
             "use server";
-            await signIn("google", { redirectTo: searchParams.from || "/s2s" });
+            await signIn("google", { redirectTo: fromPath });
           }}
+          id="loginForm"
         >
           <button type="submit" className="btn btn-primary w-full h-12 text-base mt-6">
             <GoogleG className="mr-1" /> Continue with Google
           </button>
         </form>
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+            (function() {
+              if (window.Capacitor && window.Capacitor.Plugins) {
+                var form = document.getElementById('loginForm');
+                if (!form) return;
+                form.addEventListener('submit', function(e) {
+                  e.preventDefault();
+                  var fromPath = ${JSON.stringify(fromPath)};
+                  var callbackUrl = encodeURIComponent('https://sub2sub.com/auth/mobile-callback?from=' + fromPath);
+                  window.location.href = 'https://sub2sub.com/api/auth/signin/google?callbackUrl=' + callbackUrl;
+                });
+              }
+            })();
+          `,
+          }}
+        />
 
         <p className="mt-6 text-sm text-center text-ink-500">
           By signing in, you agree to our <a href="/terms" className="text-brand-500 hover:underline">Terms</a> and <a href="/privacy" className="text-brand-500 hover:underline">Privacy Policy</a>.
