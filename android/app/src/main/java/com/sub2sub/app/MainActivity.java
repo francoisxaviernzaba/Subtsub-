@@ -46,15 +46,13 @@ public class MainActivity extends BridgeActivity {
     Uri data = intent.getData();
     String scheme = data.getScheme();
     if (CUSTOM_SCHEME.equals(scheme)) {
-      String from = data.getQueryParameter("from");
-      if (from == null) from = "/s2s";
-      // Sync cookies before navigating
+      final String fromFinal = data.getQueryParameter("from") == null ? "/s2s" : data.getQueryParameter("from");
       CookieManager cookieManager = CookieManager.getInstance();
       if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
         cookieManager.flush();
       }
       webView.post(() -> {
-        String js = "window.location.href = '" + from + "';";
+        String js = "window.location.href = '" + fromFinal + "';";
         webView.evaluateJavascript(js, null);
       });
     }
