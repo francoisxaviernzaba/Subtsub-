@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { signIn } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Login — SUB2SUB",
@@ -10,8 +11,6 @@ export const metadata: Metadata = {
 export default async function LoginPage({ searchParams }: { searchParams: { from?: string; error?: string } }) {
   const session = await auth();
   if (session?.user) redirect(searchParams.from || "/s2s");
-
-  const fromPath = searchParams.from || "/s2s";
 
   return (
     <div className="min-h-screen grid place-items-center px-5">
@@ -26,61 +25,22 @@ export default async function LoginPage({ searchParams }: { searchParams: { from
           </div>
         )}
 
-        <LoginForm fromPath={fromPath} />
+        <form
+          action={async () => {
+            "use server";
+            await signIn("google", { redirectTo: searchParams.from || "/s2s" });
+          }}
+        >
+          <button type="submit" className="btn btn-primary w-full h-12 text-base mt-6">
+            <GoogleG className="mr-1" /> Continue with Google
+          </button>
+        </form>
 
         <p className="mt-6 text-sm text-center text-ink-500">
           By signing in, you agree to our <a href="/terms" className="text-brand-500 hover:underline">Terms</a> and <a href="/privacy" className="text-brand-500 hover:underline">Privacy Policy</a>.
         </p>
       </div>
     </div>
-  );
-}
-
-"use client";
-
-import { useState, useEffect } from "react";
-import { signIn } from "@/lib/auth";
-import { isNativeApp, openBrowser } from "@/lib/platform";
-
-function LoginForm({ fromPath }: { fromPath: string }) {
-  const [loading, setLoading] = useState(false);
-  const [native, setNative] = useState(false);
-
-  useEffect(() => {
-    setNative(isNativeApp());
-  }, []);
-
-  async function handleSignIn(e: React.FormEvent) {
-    e.preventDefault();
-    if (loading) return;
-
-    if (native) {
-      setLoading(true);
-      try {
-        await openBrowser(`https://sub2sub.com/login?from=${encodeURIComponent(fromPath)}`);
-      } catch (err) {
-        console.error("[login] browser open failed", err);
-        setLoading(false);
-      }
-    } else {
-      await signIn("google", { redirectTo: fromPath });
-    }
-  }
-
-  return (
-    <form onSubmit={handleSignIn}>
-      <button
-        type="submit"
-        disabled={loading}
-        className="btn btn-primary w-full h-12 text-base mt-6"
-      >
-        {loading ? "Opening browser..." : (
-          <>
-            <GoogleG className="mr-1" /> Continue with Google
-          </>
-        )}
-      </button>
-    </form>
   );
 }
 
