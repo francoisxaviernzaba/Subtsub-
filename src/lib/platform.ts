@@ -1,3 +1,5 @@
+export const APP_SCHEME = "com.sub2sub.app";
+
 export function isNativeApp(): boolean {
   if (typeof window === "undefined") return false;
   const w = window as any;
@@ -15,4 +17,9 @@ export async function openYouTubeOverlay(url: string): Promise<boolean> {
     console.error("[platform] native overlay failed", e);
     return false;
   }
+}
+
+export function openBrowser(url: string): void {
+  if (typeof window === "undefined") return;
+  window.location.href = url;
 }
