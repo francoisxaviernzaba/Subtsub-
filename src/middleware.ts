@@ -30,6 +30,14 @@ export function middleware(req: NextRequest) {
     url.searchParams.set("from", pathname);
     return NextResponse.redirect(url);
   }
+
+  const mobileFrom = req.cookies.get("s2s_mobile_from")?.value;
+  if (mobileFrom) {
+    const res = NextResponse.next();
+    res.cookies.delete("s2s_mobile_from");
+    return res;
+  }
+
   return NextResponse.next();
 }
 

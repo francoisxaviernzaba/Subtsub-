@@ -55,8 +55,13 @@ function LoginForm({ fromPath }: { fromPath: string }) {
     if (loading) return;
 
     if (native) {
-      const oauthUrl = `https://sub2sub.com/api/auth/signin/google?callbackUrl=${encodeURIComponent(`https://sub2sub.com/auth/mobile-callback?from=${encodeURIComponent(fromPath)}`)}`;
-      openBrowser(oauthUrl);
+      setLoading(true);
+      try {
+        await openBrowser(`https://sub2sub.com/login?from=${encodeURIComponent(fromPath)}`);
+      } catch (err) {
+        console.error("[login] browser open failed", err);
+        setLoading(false);
+      }
     } else {
       await signIn("google", { redirectTo: fromPath });
     }
@@ -69,7 +74,11 @@ function LoginForm({ fromPath }: { fromPath: string }) {
         disabled={loading}
         className="btn btn-primary w-full h-12 text-base mt-6"
       >
-        <GoogleG className="mr-1" /> Continue with Google
+        {loading ? "Opening browser..." : (
+          <>
+            <GoogleG className="mr-1" /> Continue with Google
+          </>
+        )}
       </button>
     </form>
   );
