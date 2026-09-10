@@ -1,0 +1,23 @@
+{
+  "name": "SUB2SUB — Earn coins, grow your channel",
+  "short_name": "SUB2SUB",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#dc2626",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "orientation": "portrait-primary",
+  "description": "Watch boosted videos, subscribe to boosted channels, and earn coins. Spend coins to boost your own YouTube presence."
+}

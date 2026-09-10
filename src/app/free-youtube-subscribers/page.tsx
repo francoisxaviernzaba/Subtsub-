@@ -23,7 +23,7 @@ export default function FreeYouTubeSubscribersPage() {
           <li>100 free welcome coins on signup</li>
           <li>Earn coins by watching and subscribing</li>
           <li>Verified subscribers via YouTube API</li>
-          <li>No passwords, OAuth-only access</li>
+          <li>No passwords required — public channel verification</li>
           <li>Safe, sustainable, and free</li>
         </ul>
         <h2 className="text-lg font-semibold text-ink-900">Start Today</h2>

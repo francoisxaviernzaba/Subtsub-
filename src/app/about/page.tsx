@@ -19,7 +19,7 @@ export default function AboutPage() {
         <h2 className="text-lg font-semibold text-ink-900">Our Mission</h2>
         <p>We believe in responsible creator growth. Unlike artificial engagement services that use bots and fake accounts, Sub2Sub creates a sustainable ecosystem where creators support each other with real views, real watch time, and real subscribers.</p>
         <h2 className="text-lg font-semibold text-ink-900">How We Verify</h2>
-        <p>Every watch is verified for minimum duration. Every subscription is checked via YouTube&apos;s API. We never ask for your YouTube password — only OAuth read-only access.</p>
+        <p>Every watch is verified for minimum duration. Every subscription is checked via YouTube&apos;s API. We never ask for your YouTube password — public channel verification.</p>
         <h2 className="text-lg font-semibold text-ink-900">Platform Features</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li>Video view campaigns with verified watch duration</li>

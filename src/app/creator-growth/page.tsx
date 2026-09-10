@@ -16,7 +16,7 @@ export default function CreatorGrowthPage() {
       <div className="card p-6 space-y-4 text-sm text-ink-500 leading-relaxed">
         <p>SUB2SUB is a creator growth and social promotion platform built for YouTube creators who want sustainable, authentic channel growth. Unlike artificial engagement services that rely on bots and fake accounts, our platform connects real creators who support each other through verified watch time, genuine subscriptions, and organic audience discovery.</p>
         <h2 className="text-lg font-semibold text-ink-900">How Creator Growth Works</h2>
-        <p>Our coin-based economy creates a fair exchange where creators earn coins by watching boosted videos and subscribing to boosted channels. Every watch is verified for minimum duration using the YouTube Data API v3, and every subscription is confirmed through official API checks. You never share your password — only OAuth read-only access.</p>
+        <p>Our coin-based economy creates a fair exchange where creators earn coins by watching boosted videos and subscribing to boosted channels. Every watch is verified for minimum duration using the YouTube Data API v3, and every subscription is confirmed through official API checks. You never share your password — public channel verification.</p>
         <h2 className="text-lg font-semibold text-ink-900">Social Promotion Features</h2>
         <p>Create video view campaigns or subscriber campaigns to promote your content to an active community of creators. Set your coin budget, and real users will watch your videos or subscribe to your channel. The result is genuine audience growth that respects YouTube&apos;s terms of service.</p>
         <ul className="list-disc pl-5 space-y-1">

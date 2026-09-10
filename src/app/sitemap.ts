@@ -49,6 +49,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools/youtube-earnings-rpm",
     "/tools/title-tag-generator",
     "/tools/channel-growth-audit",
+    "/home",
+    "/s2s",
+    "/boost",
+    "/coins",
+    "/transactions",
+    "/profile",
+    "/settings",
+    "/quests",
+    "/leaderboard",
+    "/invite",
+    "/support",
+    "/signup",
+    "/creators/kailjeze",
+    "/alternatives",
   ];
 
   return pages.map((path) => ({

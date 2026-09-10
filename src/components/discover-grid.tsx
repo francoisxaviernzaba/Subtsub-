@@ -179,7 +179,7 @@ export function DiscoverGrid({ onOpenVideo }: Props) {
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold">Subscribe to earn</h2>
-            <p className="text-xs text-ink-500">Verify your subscription via Google OAuth</p>
+            <p className="text-xs text-ink-500">Your YouTube profile and subscriptions must be public. Our audit system checks compliance daily.</p>
           </div>
           {subs.length > 0 && <div className="ml-auto chip">{availableSubs.length} available</div>}
         </div>

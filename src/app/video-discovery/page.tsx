@@ -20,7 +20,7 @@ export default function VideoDiscoveryPage() {
         <h2 className="text-lg font-semibold text-ink-900">Build Your Audience Network</h2>
         <p>When you subscribe to boosted channels, you join an active network of creators who support each other. Our subscriber verification system checks every subscription through the YouTube Data API v3, so creators know they are gaining real followers. This network effect drives organic growth across the entire platform.</p>
         <h2 className="text-lg font-semibold text-ink-900">Platform Verification</h2>
-        <p>We never ask for your YouTube password. Instead, we use OAuth for read-only access, so your account stays secure. Watch durations are verified server-side, and subscription status is checked via YouTube&apos;s official API. This means no fake views, no ghost subscribers, and no risk to your channel.</p>
+        <p>We never ask for your YouTube password. Instead, we use Public channel verification, so your account stays secure. Watch durations are verified server-side, and subscription status is checked via YouTube&apos;s official API. This means no fake views, no ghost subscribers, and no risk to your channel.</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Browse boosted videos by category or niche</li>
           <li>Earn coins for verified watch time</li>

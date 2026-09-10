@@ -7,6 +7,7 @@ import { Header } from "@/components/header";
 import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/toast";
 import { OrganizationSchema, WebApplicationSchema } from "@/components/schema";
+import { InstallPrompt } from "@/components/install-prompt";
 
 export const metadata: Metadata = {
   title: { default: "SUB2SUB — Earn coins, grow your channel", template: "%s · SUB2SUB" },
@@ -14,9 +15,10 @@ export const metadata: Metadata = {
     "Watch boosted videos, subscribe to boosted channels, and earn coins. Spend coins to boost your own YouTube presence.",
   metadataBase: new URL(process.env.NEXTAUTH_URL || "http://localhost:3000"),
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/favicon.ico", sizes: "64x64 32x32 24x24 16x16", type: "image/x-icon" }],
+    apple: [{ url: "/icon.svg", sizes: "512x512", type: "image/svg+xml" }],
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "SUB2SUB",
     description: "Watch. Subscribe. Earn. Boost.",
@@ -74,6 +76,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <main className="px-3 sm:px-5 pb-24 md:pb-8 pt-4">{children}</main>
             {session?.user && <BottomNav />}
             <Toaster />
+            <InstallPrompt />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  if ('serviceWorker' in navigator) {
+                    window.addEventListener('load', function() {
+                      navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                        console.log('SW registration failed:', err);
+                      });
+                    });
+                  }
+                `,
+              }}
+            />
           </div>
         </Providers>
       </body>

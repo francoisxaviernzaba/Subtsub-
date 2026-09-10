@@ -27,7 +27,8 @@ export default async function BoostPage() {
       <BoostClient
         balance={balance}
         connected={!!yt}
-        youtube={yt ? { id: yt.id, title: yt.title, handle: yt.handle, thumbnailUrl: yt.thumbnailUrl } : null}
+        youtube={yt ? { id: yt.id, youtubeId: yt.id, title: yt.title, handle: yt.handle, thumbnailUrl: yt.thumbnailUrl } : null}
+
         settings={settings}
         campaigns={campaigns.map((c) => ({
           id: c.id,

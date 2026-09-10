@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Coins, Users, ExternalLink, CheckCircle2, Loader2, X } from "lucide-react";
+import { Coins, Users, ExternalLink, CheckCircle2, Loader2, X, AlertTriangle } from "lucide-react";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
+import { isNativeApp, openYouTubeOverlay } from "@/lib/platform";
 
 type Item = {
   id: string;
@@ -46,8 +47,9 @@ export function S2SGrid({ initial }: { initial: Item[] }) {
 
 function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
   const router = useRouter();
-  const [state, setState] = useState<"idle" | "verifying" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "opened" | "countdown" | "verifying" | "done" | "error">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(5);
 
   const channelTitle = campaign.owner.youtubeChannel?.title || campaign.owner.name || "Channel";
   const channelHandle = campaign.owner.youtubeChannel?.handle || "";
@@ -57,6 +59,33 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
 
   const doClaim = useCallback(async () => {
     if (state === "verifying" || state === "done") return;
+    if (isNativeApp() && state === "idle") {
+      setState("verifying");
+      setErrMsg(null);
+      try {
+        await openYouTubeOverlay(
+          `https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`
+        );
+      } catch {
+        setState("error");
+        setErrMsg("Native overlay failed");
+      }
+      return;
+    }
+    if (!isNativeApp() && state === "idle") {
+      setState("opened");
+      window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
+      let remainingSec = 5;
+      setCountdown(remainingSec);
+      setState("countdown");
+      const timer = setInterval(() => {
+        remainingSec -= 1;
+        setCountdown(remainingSec);
+        if (remainingSec <= 0) clearInterval(timer);
+      }, 1000);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+    if (state !== "idle" && state !== "countdown" && state !== "opened") return;
     setState("verifying");
     setErrMsg(null);
     try {
@@ -80,14 +109,29 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
       setState("error");
       setErrMsg("Network error");
     }
-  }, [campaign.id, onDone, router, state]);
+  }, [campaign.id, campaign.youtubeChannelId, onDone, router, state]);
 
   useEffect(() => {
     function onFocus() {
-      if (state === "idle") doClaim();
+      if (!isNativeApp() && state === "idle") doClaim();
     }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
+  }, [doClaim, state]);
+
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const handler = (e: any) => {
+      const status = e?.detail?.status;
+      if (status === "subscribed") {
+        doClaim();
+      } else if (status === "cancelled") {
+        setState("idle");
+        setErrMsg(null);
+      }
+    };
+    window.addEventListener("youtubeOverlayResult", handler as EventListener);
+    return () => window.removeEventListener("youtubeOverlayResult", handler as EventListener);
   }, [doClaim, state]);
 
   return (
@@ -122,6 +166,14 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
             <div className="text-xs text-rose-600">{errMsg}</div>
             <button onClick={doClaim} className="btn btn-outline w-full">Try again</button>
           </>
+        ) : state === "countdown" ? (
+          <button disabled className="btn btn-primary w-full">
+            <Loader2 size={14} className="animate-spin" /> Verify in {countdown}s
+          </button>
+        ) : state === "opened" ? (
+          <button onClick={doClaim} className="btn btn-primary w-full">
+            <Users size={14} /> I confirm I subscribed
+          </button>
         ) : state === "verifying" ? (
           <button disabled className="btn btn-primary w-full">
             <Loader2 size={14} className="animate-spin" /> Verifying…
@@ -137,10 +189,14 @@ function S2SCard({ campaign, onDone }: { campaign: Item; onDone: () => void }) {
               <ExternalLink size={14} /> Open & Subscribe on YouTube
             </a>
             <button onClick={doClaim} className="btn btn-primary w-full">
-              <Users size={14} /> Verify My Subscription
+              <Users size={14} /> I confirm I subscribed
             </button>
           </>
         )}
+        <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <AlertTriangle size={12} className="flex-shrink-0" />
+          <span>False attestations may result in account suspension. Our system audits public subscription data daily.</span>
+        </div>
       </div>
     </div>
   );

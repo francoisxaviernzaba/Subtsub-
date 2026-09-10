@@ -33,6 +33,9 @@ export async function POST(req: NextRequest) {
     };
     const claimResult = await withIdempotency<ClaimResult>(u.user.id, "subscribe.claim", idempotencyKey ?? null, async () => {
       const settings = await getSettings();
+      const myChannel = await prisma.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
+      if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
+
       const txResult: TxResult = await prisma.$transaction(async (tx) => {
         const campaign = await tx.campaign.findUnique({ where: { id: campaignId } });
         if (!campaign) throw new HttpError(404, "NOT_FOUND", "Campaign not found");
@@ -49,10 +52,10 @@ export async function POST(req: NextRequest) {
         if (existing) {
           if (existing.state === "VERIFIED") throw new HttpError(409, "DUPLICATE", "You already subscribed to this channel");
           if (existing.state === "PENDING") throw new HttpError(409, "PENDING", "Verification already in progress");
+          if (existing.state === "FAILED" || existing.state === "REVOKED" || existing.state === "REVERSED") {
+            await tx.taskCompletion.delete({ where: { id: existing.id } });
+          }
         }
-
-        const myChannel = await tx.youTubeChannel.findUnique({ where: { userId: u!.user.id } });
-        if (!myChannel) throw new HttpError(400, "NO_YT", "Connect your YouTube channel first in settings");
 
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
 
@@ -140,32 +143,38 @@ export async function POST(req: NextRequest) {
       });
       const { netReward } = finalState;
 
-      await prisma.notification.create({
-        data: {
-          userId: u!.user.id,
-          kind: "SUBSCRIPTION_VERIFIED",
-          title: `+${netReward} coins`,
-          body: `Subscription verified.`,
-          link: "/transactions",
-        },
-      }).catch(() => {});
-
-      await addXp(u!.user.id, 25, "subscribe");
-      await updateDailyStreak(u!.user.id);
-      await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
-
-      const after = await prisma.campaign.findUnique({ where: { id: txResult.campaign.id } });
-      if (after && after.spentBudget >= after.totalBudget) {
+      try {
         await prisma.notification.create({
           data: {
-            userId: after.ownerId,
-            kind: "BUDGET_EXHAUSTED",
-            title: "Campaign budget exhausted",
-            body: after.title,
-            link: "/boost",
+            userId: u!.user.id,
+            kind: "SUBSCRIPTION_VERIFIED",
+            title: `+${netReward} coins`,
+            body: `Subscription verified.`,
+            link: "/transactions",
           },
         }).catch(() => {});
-      }
+      } catch {}
+
+      try {
+        await addXp(u!.user.id, 25, "subscribe");
+        await updateDailyStreak(u!.user.id);
+        await incrementDailyQuest(u!.user.id, "SUBSCRIBE_CHANNELS");
+      } catch {}
+
+      try {
+        const after = await prisma.campaign.findUnique({ where: { id: txResult.campaign.id } });
+        if (after && after.spentBudget >= after.totalBudget) {
+          await prisma.notification.create({
+            data: {
+              userId: after.ownerId,
+              kind: "BUDGET_EXHAUSTED",
+              title: "Campaign budget exhausted",
+              body: after.title,
+              link: "/boost",
+            },
+          }).catch(() => {});
+        }
+      } catch {}
 
       return { ok: true, reward: netReward, balance: finalState.credit.balance };
     });

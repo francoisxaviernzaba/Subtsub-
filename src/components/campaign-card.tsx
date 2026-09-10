@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Coins, Eye, Users, Loader2, Play, CheckCircle2, Lock, SkipForward } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Coins, Eye, Users, Loader2, Play, CheckCircle2, Lock, SkipForward, AlertTriangle } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { toast } from "./toast";
 import { useRouter } from "next/navigation";
 import { VideoPlayer, type VideoPlayerOpenPayload } from "./video-player";
+import { isNativeApp, openYouTubeOverlay } from "@/lib/platform";
 
 type Campaign = {
   id: string;
@@ -32,8 +33,9 @@ type Props = {
 
 export function CampaignCard({ campaign, onOpenVideo }: Props) {
   const router = useRouter();
-  const [state, setState] = useState<"idle" | "verifying" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "opened" | "countdown" | "verifying" | "done" | "error">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(5);
 
   const remaining = Math.max(0, campaign.maxActions - campaign.completedActions);
   const budgetLeft = Math.max(0, campaign.totalBudget - campaign.spentBudget);
@@ -62,13 +64,39 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
   }
 
   async function claimSubscribe() {
-    if (!isClaimable || state !== "idle") return;
-    if (!campaign.youtubeChannelId) return;
+    if (!isClaimable) return;
+    if (isNativeApp() && state === "idle") {
+      setState("verifying");
+      setErrMsg(null);
+      try {
+        await openYouTubeOverlay(
+          `https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`
+        );
+      } catch {
+        setState("error");
+        setErrMsg("Native overlay failed");
+      }
+      return;
+    }
+    if (!isNativeApp() && state === "idle") {
+      setState("opened");
+      window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
+      let remaining = 5;
+      setCountdown(remaining);
+      setState("countdown");
+      const timer = setInterval(() => {
+        remaining -= 1;
+        setCountdown(remaining);
+        if (remaining <= 0) {
+          clearInterval(timer);
+        }
+      }, 1000);
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+    if (state !== "idle" && state !== "countdown" && state !== "opened") return;
     setState("verifying");
     setErrMsg(null);
-    window.open(`https://www.youtube.com/channel/${campaign.youtubeChannelId}?sub_confirmation=1`, "_blank");
     try {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
       const r = await fetch("/api/tasks/subscribe/claim", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -89,6 +117,21 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
       setErrMsg("Network error");
     }
   }
+
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const handler = (e: any) => {
+      const status = e?.detail?.status;
+      if (status === "subscribed") {
+        claimSubscribe();
+      } else if (status === "cancelled") {
+        setState("idle");
+        setErrMsg(null);
+      }
+    };
+    window.addEventListener("youtubeOverlayResult", handler as EventListener);
+    return () => window.removeEventListener("youtubeOverlayResult", handler as EventListener);
+  }, [claimSubscribe]);
 
   return (
     <div className="card overflow-hidden group">
@@ -133,7 +176,7 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
           {isVideo && <span>{campaign.minWatchSeconds}s watch</span>}
         </div>
 
-        <div className="mt-3">
+        <div className="mt-3 space-y-2">
           {state === "done" || isCompleted ? (
             <div className="btn w-full bg-emerald-100 text-emerald-700 border border-emerald-200" title="You already earned this reward">
               <CheckCircle2 size={14} /> Reward earned · +{campaign.rewardPerAction}
@@ -145,7 +188,7 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
           ) : state === "error" ? (
             <div className="space-y-2">
               <div className="text-xs text-rose-600">{errMsg}</div>
-              <button onClick={isVideo ? startVideo : claimSubscribe} className="btn btn-outline w-full">Try again</button>
+              <button onClick={claimSubscribe} className="btn btn-outline w-full">Try again</button>
             </div>
           ) : isBlocked ? (
             <div className="btn w-full bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed" title="This campaign is no longer available">
@@ -159,18 +202,36 @@ export function CampaignCard({ campaign, onOpenVideo }: Props) {
             >
               <Play size={14} /> Watch & Earn
             </button>
+          ) : state === "countdown" ? (
+            <button disabled className="btn btn-primary w-full">
+              <Loader2 size={14} className="animate-spin" /> Verify in {countdown}s
+            </button>
+          ) : state === "opened" ? (
+            <button onClick={claimSubscribe} className="btn btn-primary w-full">
+              <Users size={14} /> I confirm I subscribed
+            </button>
+          ) : state === "verifying" ? (
+            <button disabled className="btn btn-primary w-full">
+              <Loader2 size={14} className="animate-spin" /> Verifying…
+            </button>
           ) : state === "idle" ? (
             <button
               onClick={claimSubscribe}
               disabled={!isClaimable}
               className="btn btn-primary w-full"
             >
-              <Users size={14} /> Subscribe on YouTube → Verify
+              <Users size={14} /> I confirm I subscribed
             </button>
           ) : (
             <button disabled className="btn btn-primary w-full">
               <Loader2 size={14} className="animate-spin" /> Verifying…
             </button>
+          )}
+          {!isVideo && state !== "done" && !isCompleted && !isPending && state !== "verifying" && (
+            <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertTriangle size={12} className="flex-shrink-0" />
+              <span>False attestations may result in account suspension. Our system audits public subscription data daily.</span>
+            </div>
           )}
         </div>
       </div>

@@ -21,7 +21,7 @@ export default function GetYouTubeSubscribersPage() {
         <p>Our platform uses a coin-based system where creators earn coins by watching videos and subscribing to channels. They can then spend those coins on your subscriber campaign. Each subscription is verified in real time, so you only pay for genuine results. The process is safe, transparent, and fully compliant with YouTube&apos;s terms of service.</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Verified subscribers via YouTube Data API v3</li>
-          <li>No passwords required — OAuth only</li>
+          <li>No passwords required — Public channel verification</li>
           <li>Set your budget with coin packages</li>
           <li>Real-time tracking of new subscribers</li>
           <li>Safe for long-term channel health</li>
