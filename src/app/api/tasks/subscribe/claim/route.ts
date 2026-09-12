@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         }
 
         const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
+        if (reward <= 0) throw new HttpError(400, "ZERO_REWARD", "This campaign currently has no coin reward configured.");
 
         const completion = await tx.taskCompletion.create({
           data: {

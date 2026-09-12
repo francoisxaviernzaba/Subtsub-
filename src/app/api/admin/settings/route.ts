@@ -5,13 +5,14 @@ import { setSettings } from "@/lib/settings";
 import { parseJson, handleError, HttpError } from "@/lib/api";
 
 const Body = z.object({
-  viewRewardCoins: z.number().int().min(0).optional(),
+  viewRewardCoins: z.number().int().min(1).optional(),
   minWatchSeconds: z.number().int().min(1).max(3600).optional(),
-  subscribeRewardCoins: z.number().int().min(0).optional(),
+  subscribeRewardCoins: z.number().int().min(1).optional(),
   minBudget: z.number().int().min(1).optional(),
   maxBudget: z.number().int().min(1).optional(),
   minRewardPerAction: z.number().int().min(1).optional(),
   maxRewardPerAction: z.number().int().min(1).optional(),
+  platformFeePercent: z.number().int().min(0).max(100).optional(),
   enforceChannelPermanence: z.boolean().optional(),
   coinPackages: z.array(z.object({ coins: z.number().int().min(1), amountCents: z.number().int().min(1), currency: z.string().min(3) })).optional(),
   inviteRewardCoins: z.number().int().min(0).optional(),

@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       }
 
       const reward = Math.min(campaign.rewardPerAction, settings.maxRewardPerAction);
+      if (reward <= 0) throw new HttpError(400, "ZERO_REWARD", "This campaign currently has no coin reward configured.");
 
       // Atomic ledger + campaign reserve
       const result = await prisma.$transaction(async (tx) => {

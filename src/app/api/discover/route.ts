@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     const items = await prisma.campaign.findMany({
       where: {
         status: "ACTIVE",
-        ownerId: { not: user.user.id },
+        rewardPerAction: { gt: 0 },
         ...(type !== "ALL" ? { type } : {}),
         OR: [{ startsAt: null }, { startsAt: { lte: now } }],
         AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       return prisma.campaign.findMany({
         where: {
           status: "ACTIVE",
-          ownerId: { not: user.user.id },
+          rewardPerAction: { gt: 0 },
           ...(type !== "ALL" ? { type } : {}),
         },
         take: take + 1,
