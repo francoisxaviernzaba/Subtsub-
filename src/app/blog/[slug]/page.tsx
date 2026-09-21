@@ -210,6 +210,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: `${post.title} · SUB2SUB`,
     description: post.content?.toString().slice(0, 160) || "SUB2SUB blog post",
+    alternates: { canonical: `https://sub2sub.com/blog/${params.slug}` },
   };
 }
 

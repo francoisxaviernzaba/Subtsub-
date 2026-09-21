@@ -4,6 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Sub2Sub vs Sub4Sub Safety Breakdown — SUB2SUB",
   description: "A detailed safety breakdown comparing SUB2SUB and Sub4Sub. Learn why SUB2SUB's verified approach protects your YouTube channel.",
+  alternates: { canonical: "https://sub2sub.com/topics/sub2sub-vs-sub4sub-safety-breakdown" },
 };
 
 export default function Sub2SubVsSub4SubSafetyBreakdownPage() {

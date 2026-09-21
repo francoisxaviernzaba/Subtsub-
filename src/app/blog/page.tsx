@@ -4,6 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Blog · SUB2SUB",
   description: "Tips, guides, and insights for YouTube creators looking to grow their channel.",
+  alternates: { canonical: "https://sub2sub.com/blog" },
 };
 
 const posts = [

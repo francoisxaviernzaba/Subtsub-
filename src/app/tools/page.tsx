@@ -4,6 +4,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Free YouTube Tools — SUB2SUB",
   description: "Free YouTube growth tools: watch time calculator, 4000 watch hours planner, views to watch hours converter, RPM calculator, title & tag generator, channel growth audit.",
+  alternates: { canonical: "https://sub2sub.com/tools" },
 };
 
 const tools = [
