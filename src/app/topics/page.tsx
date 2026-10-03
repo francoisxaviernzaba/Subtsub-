@@ -4,6 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Topics — SUB2SUB",
   description: "Browse all topics on SUB2SUB. YouTube growth guides, comparisons, and creator resources.",
+  alternates: { canonical: "https://sub2sub.com/topics" },
 };
 
 export default function TopicsPage() {

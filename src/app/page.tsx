@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 export const metadata: Metadata = {
   title: "Sub2Sub (2Sub) — #1 Real YouTube Creator Growth & Video Discovery Platform",
   description: "Sub2Sub is the verified creator growth and video discovery platform for YouTube creators. Earn coins, discover creators, promote videos, and grow your channel with real engagement.",
+  alternates: { canonical: "https://sub2sub.com" },
 };
 
 export default async function Landing() {

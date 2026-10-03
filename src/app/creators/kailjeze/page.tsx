@@ -4,6 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "kailjeze — SUB2SUB Creator Profile",
   description: "Meet kailjeze, a top creator on SUB2SUB. Learn about their YouTube growth strategies and how they use verified campaigns to succeed.",
+  alternates: { canonical: "https://sub2sub.com/creators/kailjeze" },
 };
 
 export default function KailjezeProfilePage() {

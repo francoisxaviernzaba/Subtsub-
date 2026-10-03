@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/toast";
 import { OrganizationSchema, WebApplicationSchema } from "@/components/schema";
 import { InstallPrompt } from "@/components/install-prompt";
+import { CanonicalLink } from "@/components/canonical-link";
 
 export const metadata: Metadata = {
   title: { default: "SUB2SUB — Earn coins, grow your channel", template: "%s · SUB2SUB" },
@@ -77,6 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {session?.user && <BottomNav />}
             <Toaster />
             <InstallPrompt />
+            <CanonicalLink />
             <script
               dangerouslySetInnerHTML={{
                 __html: `
