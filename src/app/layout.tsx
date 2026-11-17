@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react";
 import { Providers } from "@/components/providers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -79,6 +80,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Toaster />
             <InstallPrompt />
             <CanonicalLink />
+            <Analytics />
             <script
               dangerouslySetInnerHTML={{
                 __html: `

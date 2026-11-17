@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Sign Up — SUB2SUB",
   description: "Create a free SUB2SUB account with Google. Start earning coins, watching videos, and growing your YouTube channel.",
   alternates: { canonical: "https://sub2sub.com/signup" },
+  robots: { index: false, follow: true },
 };
 
 export default async function SignupPage({ searchParams }: { searchParams: { from?: string; error?: string; ref?: string } }) {

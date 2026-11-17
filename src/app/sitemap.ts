@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://sub2sub.com";
-  const now = new Date().toISOString();
+  const lastModified = "2026-11-17";
 
   const pages = [
     "/",
@@ -69,7 +69,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return pages.map((path) => ({
     url: `${base}${path}`,
-    lastModified: now,
+    lastModified,
     changeFrequency: path === "/" ? "daily" : "weekly",
     priority: path === "/" ? 1.0 : path === "/pricing" || path === "/how-it-works" ? 0.95 : 0.85,
   }));

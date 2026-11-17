@@ -7,7 +7,9 @@ export function CanonicalLink() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const canonical = `https://sub2sub.com${pathname}`;
+    const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://sub2sub.com").replace(/\/$/, "");
+    const path = pathname === "/" ? "/" : pathname.replace(/\/+$/, "");
+    const canonical = `${base}${path}`;
     let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
     if (!link) {
       link = document.createElement("link");

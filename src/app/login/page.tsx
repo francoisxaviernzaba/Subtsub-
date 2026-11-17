@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Login — SUB2SUB",
   description: "Sign in to SUB2SUB with Google. Access your creator dashboard, campaigns, and coin balance.",
   alternates: { canonical: "https://sub2sub.com/login" },
+  robots: { index: false, follow: true },
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: { from?: string; error?: string } }) {

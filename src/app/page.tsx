@@ -27,7 +27,7 @@ export default async function Landing() {
         <section className="px-5 pt-20 pb-16">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight">
-              Get 100 Free Coins Today
+              Get 100 Free Coins
             </h1>
             <p className="mt-4 text-xl sm:text-2xl font-semibold text-ink-800 dark:text-ink-200">
               Creator Growth & Video Discovery Platform
